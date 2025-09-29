@@ -24,19 +24,7 @@ def detect_particles_in_all_frames(enhanced_frames: np.ndarray,
                                  ev_filter: np.ndarray,
                                  threshold: float = 0.35, # confidence threshold for detection (tweakable)
                                  min_distance: int = 30) -> Dict[int, Dict[str, List]]:
-    """
-    Detect particles in all enhanced frames using the specialized EV filter
-    
-    Args:
-        enhanced_frames (np.ndarray): Enhanced image frames
-        ev_filter (np.ndarray): EV detection filter
-        threshold (float): Minimum correlation score for detection
-        min_distance (int): Minimum distance between detections (non-max suppression)
-        
-    Returns:
-        Dict[int, Dict[str, List]]: Dictionary with frame indices as keys and 
-                                   lists of particle positions and scores as values
-    """
+ 
     print("Detecting particles in all frames...")
     num_frames = len(enhanced_frames)
     all_particles = {}
@@ -83,18 +71,7 @@ def visualize_detection_results(enhanced_frames: np.ndarray,
                               all_particles: Dict[int, Dict[str, List]],
                               output_dir: str,
                               num_samples: int = 6) -> List[str]:
-    """
-    Create visualizations showing particle detection results
-    
-    Args:
-        enhanced_frames (np.ndarray): Enhanced frames
-        all_particles (Dict): Detection results
-        output_dir (str): Directory to save visualizations
-        num_samples (int): Number of sample frames to visualize
-        
-    Returns:
-        List[str]: Paths to created visualization files
-    """
+
     print("Creating detection result visualizations...")
     
     num_frames = len(enhanced_frames)
@@ -158,19 +135,7 @@ def create_detection_video(enhanced_frames: np.ndarray,
                          output_dir: str,
                          fps: int = 5,
                          show_scores: bool = True) -> str:
-    """
-    Create a video showing particle detections across all frames
-    
-    Args:
-        enhanced_frames (np.ndarray): Enhanced frames
-        all_particles (Dict): Detection results
-        output_dir (str): Output directory
-        fps (int): Frames per second for output video
-        show_scores (bool): Whether to display detection scores
-        
-    Returns:
-        str: Path to the created video file
-    """
+
     print("Creating detection video...")
     
     # Get dimensions
@@ -230,18 +195,7 @@ def analyze_detection_quality(all_particles: Dict[int, Dict[str, List]],
                             enhanced_frames: np.ndarray,
                             detection_params: Dict[str, Any],
                             output_dir: str) -> str:
-    """
-    Basic analysis of detection quality and characteristics
-    
-    Args:
-        all_particles (Dict): Detection results
-        enhanced_frames (np.ndarray): Enhanced frames
-        detection_params (Dict): Detection parameters used
-        output_dir (str): Output directory
-        
-    Returns:
-        str: Path to the quality analysis file
-    """
+
     # Collect basic detection statistics
     all_scores = []
     detections_per_frame = []
