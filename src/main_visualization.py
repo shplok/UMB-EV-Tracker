@@ -45,7 +45,7 @@ def create_output_directory(base_dir: str = "ev_visualization") -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     root = "out"
     os.makedirs(root, exist_ok=True)
-    output_dir = os.path.join(root, f"{base_dir}_{timestamp}")
+    output_dir = os.path.join("UMB-EV-Tracker", root, f"{base_dir}_{timestamp}")
     
     os.makedirs(output_dir, exist_ok=True)
     
