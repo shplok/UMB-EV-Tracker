@@ -20,17 +20,7 @@ from typing import Tuple, List
 
 
 def create_temporal_background(image_stack: np.ndarray, window_size: int = 15) -> np.ndarray:
-    """
-    Create a temporal background model for all frames.
-    For each frame, the background is the median of surrounding frames.
-    
-    Args:
-        image_stack (np.ndarray): Input image stack
-        window_size (int): Number of frames on each side to use for background
-        
-    Returns:
-        np.ndarray: Background models for each frame
-    """
+
     print(f"Creating temporal background models for all frames (window_size={window_size})...")
     num_frames = len(image_stack)
     background_models = np.zeros_like(image_stack, dtype=np.float32)
