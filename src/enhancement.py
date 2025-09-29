@@ -22,18 +22,7 @@ def enhance_movement_frames(subtracted_frames: np.ndarray,
                           blur_kernel_size: int = 7,
                           clahe_clip_limit: float = 2.0,
                           clahe_grid_size: Tuple[int, int] = (8, 8)) -> np.ndarray:
-    """
-    Enhance the subtracted frames to highlight moving particles
-    
-    Args:
-        subtracted_frames (np.ndarray): Background-subtracted frames
-        blur_kernel_size (int): Size of Gaussian blur kernel for noise reduction
-        clahe_clip_limit (float): CLAHE clip limit for contrast enhancement
-        clahe_grid_size (Tuple): Grid size for CLAHE tiles
-        
-    Returns:
-        np.ndarray: Enhanced frames ready for particle detection
-    """
+
     print("Enhancing movement frames...")
     num_frames = len(subtracted_frames)
     enhanced_frames = np.zeros_like(subtracted_frames, dtype=np.uint8)
