@@ -1,0 +1,43 @@
+# EV Detection and Tracking Pipeline - Step-by-Step Description
+
+## Overview
+This pipeline detects and tracks extracellular vesicles (EVs) in microscopy image sequences using computer vision techniques. The system processes TIFF image stacks to identify ~20-pixel diameter particles and follows their movement across frames.
+
+## Stage 1: Image Loading
+The pipeline loads TIFF image stacks using the tifffile library and validates the data format. Stack information including dimensions, data type, and basic statistics is extracted for quality assessment. The system ensures the image stack has sufficient frames (minimum 5) for temporal analysis.
+
+## Stage 2: Filter Creation
+A specialized W-shaped filter is created to detect ~20px diameter EVs with concentric regions: bright center (radius 10px), dark ring (radius 10-15px), and faint outer ring (radius 15-20px). The filter undergoes Gaussian smoothing (sigma=2.0) and normalization to zero mean and unit norm. 2D, 3D, and cross-sectional visualizations are generated to verify filter structure.
+
+## Stage 3: Background Subtraction
+Temporal background models are created for each frame using the median of surrounding frames within a sliding window (default 15 frames). The current frame is excluded from its own background calculation to preserve moving particles. Background subtraction isolates dynamic elements by removing static image components.
+
+## Stage 4: Enhancement
+Background-subtracted frames undergo enhancement to improve particle visibility. Absolute values are taken to capture both positive and negative intensity changes, followed by normalization to 0-255 range. CLAHE (Contrast Limited Adaptive Histogram Equalization) enhances local contrast, and Gaussian blur reduces noise while preserving particle features.
+
+## Stage 5: Particle Detection
+Template matching applies the EV filter to enhanced frames using normalized cross-correlation. Local maxima above the threshold (default 0.35) are identified using non-maximum suppression with minimum separation distance (default 30px). Detection positions are adjusted to account for filter size, and correlation scores are recorded for each detection.
+
+## Stage 6: Particle Tracking
+Detections are linked across frames using nearest-neighbor matching within maximum distance constraints (default 25px). Tracks are terminated if no matching detection is found within the frame gap limit (default 3 frames). Only tracks with minimum length (default 5 detections) are retained for analysis.
+
+## Stage 8: Visualization and Output
+Track overlays show particle paths on background images with color-coding by detection quality. Detailed analysis plots display velocity profiles, detection scores, and motion characteristics for top-quality tracks. A detection video (MP4) shows particle detections across all frames with real-time overlays and frame-by-frame statistics.
+
+## Output Files
+- Filter visualization (2D heatmap, 3D surface, cross-sections)
+- Background subtraction comparison (before/after frames)
+- Enhancement comparison (before/after processing)
+- Detection overlays (sample frames with particle circles)
+- Detection heatmap (spatial distribution of detections)
+- Detection video (MP4 showing all frames with overlays)
+- Track overview (all particle paths on single image)
+- Detailed track analysis (velocity and score profiles)
+- Pipeline parameters (configuration settings used)
+
+## Key Parameters
+- Filter: radius=10px, size=41px, sigma=2.0
+- Background: window_size=15 frames
+- Enhancement: blur_kernel=7px, CLAHE_limit=2.0
+- Detection: threshold=0.35, min_distance=30px
+- Tracking: max_distance=25px, min_length=5 frames, max_gap=3 frames

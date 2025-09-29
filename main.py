@@ -1,0 +1,369 @@
+import os
+import sys
+import time
+from datetime import datetime
+from typing import Dict, Any, List
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Import all pipeline modules
+from image_loader import (
+    load_tiff_stack, 
+    validate_image_stack, 
+    get_stack_info
+)
+from filter_creation import (
+    create_large_ev_filter,
+    visualize_filter,
+    save_filter_data
+)
+from background_subtraction import (
+    create_temporal_background,
+    subtract_background_from_stack,
+    visualize_background_subtraction
+)
+from enhancement import (
+    enhance_movement_frames,
+    visualize_enhancement
+)
+from detection import (
+    detect_particles_in_all_frames,
+    visualize_detection_results,
+    analyze_detection_quality
+)
+from tracking import (
+    track_particles_across_frames,
+    calculate_track_properties,
+    visualize_tracking_results,
+    analyze_tracking_quality
+)
+
+
+def create_output_directory(base_dir: str = "ev_detection_results") -> str:
+    """Create a timestamped output directory for results"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Place all outputs under an `out/` root directory for easier discovery
+    root = "out"
+    os.makedirs(root, exist_ok=True)
+    output_dir = os.path.join(root, f"{base_dir}_{timestamp}")
+    
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Create subdirectories for organized output
+    subdirs = [
+        "02_filter_creation", 
+        "03_background_subtraction",
+        "04_enhancement",
+        "05_detection",
+        "06_tracking"
+    ]
+    
+    for subdir in subdirs:
+        os.makedirs(os.path.join(output_dir, subdir), exist_ok=True)
+    
+    print(f"Created output directory: {output_dir}")
+    return output_dir
+
+
+def run_ev_detection_pipeline(tiff_file: str, 
+                            output_dir: str = None,
+                            parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+    
+    start_time = time.time()
+    
+    # Set default parameters
+    if parameters is None:
+        parameters = {
+            'input_file': tiff_file,
+            'filter_radius': 10,
+            'filter_size': 41,
+            'filter_sigma': 2.0,
+            'bg_window_size': 15,
+            'blur_kernel_size': 7,
+            'clahe_clip_limit': 2.0,
+            'clahe_grid_size': (8, 8),
+            'detection_threshold': 0.35,
+            'min_distance': 30,
+            'max_distance': 25,
+            'min_track_length': 5,
+            'max_frame_gap': 3,
+            'num_sample_frames': 6,
+            'num_top_tracks': 5
+        }
+    
+    # Create output directory if not provided
+    if output_dir is None:
+        output_dir = create_output_directory()
+    
+    print(f"Input file: {tiff_file}")
+    print(f"Output directory: {output_dir}")
+    
+    results = {
+        'input_file': tiff_file,
+        'output_dir': output_dir,
+        'parameters': parameters,
+        'start_time': start_time,
+        'stage_times': {},
+        'stage_results': {}
+    }
+    
+    try:
+        # Stage 1: Image Loading
+        print("STAGE 1: IMAGE LOADING")
+        print("-" * 30)
+        stage_start = time.time()
+        
+        image_stack = load_tiff_stack(tiff_file)
+        if image_stack is None:
+            raise ValueError(f"Failed to load TIFF file: {tiff_file}")
+        
+        if not validate_image_stack(image_stack):
+            raise ValueError("Image stack validation failed")
+        
+        stack_info = get_stack_info(image_stack)
+        
+        results['stage_times']['image_loading'] = time.time() - stage_start
+        results['stage_results']['image_loading'] = {
+            'stack_shape': image_stack.shape,
+            'stack_info': stack_info
+        }
+        
+        # Stage 2: Filter Creation
+        print("STAGE 2: FILTER CREATION")
+        print("-" * 30)
+        stage_start = time.time()
+        
+        filter_params = {
+            'radius': parameters['filter_radius'],
+            'size': parameters['filter_size'],
+            'sigma': parameters['filter_sigma']
+        }
+        
+        ev_filter = create_large_ev_filter(**filter_params)
+        filter_dir = os.path.join(output_dir, "02_filter_creation")
+        
+        visualize_filter(ev_filter, filter_dir, filter_params)
+        save_filter_data(ev_filter, filter_params, filter_dir)
+        
+        results['stage_times']['filter_creation'] = time.time() - stage_start
+        results['stage_results']['filter_creation'] = {
+            'filter_shape': ev_filter.shape,
+            'filter_params': filter_params
+        }
+        
+        # Stage 3: Background Subtraction
+        print("STAGE 3: BACKGROUND SUBTRACTION")
+        print("-" * 30)
+        stage_start = time.time()
+        
+        background_models = create_temporal_background(
+            image_stack, 
+            window_size=parameters['bg_window_size']
+        )
+        subtracted_frames = subtract_background_from_stack(image_stack, background_models)
+        
+        bg_dir = os.path.join(output_dir, "03_background_subtraction")
+        visualize_background_subtraction(
+            image_stack, background_models, subtracted_frames, bg_dir,
+            num_samples=parameters['num_sample_frames']
+        )
+        
+        results['stage_times']['background_subtraction'] = time.time() - stage_start
+        results['stage_results']['background_subtraction'] = {
+            'window_size': parameters['bg_window_size'],
+            'frames_processed': len(subtracted_frames)
+        }
+        
+        # Stage 4: Enhancement
+        print("STAGE 4: ENHANCEMENT")
+        print("-" * 30)
+        stage_start = time.time()
+        
+        enhancement_params = {
+            'blur_kernel_size': parameters['blur_kernel_size'],
+            'clahe_clip_limit': parameters['clahe_clip_limit'],
+            'clahe_grid_size': parameters['clahe_grid_size']
+        }
+        
+        enhanced_frames = enhance_movement_frames(subtracted_frames, **enhancement_params)
+        
+        enh_dir = os.path.join(output_dir, "04_enhancement")
+        visualize_enhancement(
+            subtracted_frames, enhanced_frames, enh_dir,
+            num_samples=parameters['num_sample_frames']
+        )
+        
+        results['stage_times']['enhancement'] = time.time() - stage_start
+        results['stage_results']['enhancement'] = {
+            'enhancement_params': enhancement_params,
+            'frames_processed': len(enhanced_frames)
+        }
+        
+        # Stage 5: Detection
+        print("STAGE 5: PARTICLE DETECTION")
+        print("-" * 30)
+        stage_start = time.time()
+        
+        detection_params = {
+            'threshold': parameters['detection_threshold'],
+            'min_distance': parameters['min_distance'],
+            'filter_size': parameters['filter_size']
+        }
+        
+        all_particles = detect_particles_in_all_frames(
+            enhanced_frames, ev_filter,
+            threshold=parameters['detection_threshold'],
+            min_distance=parameters['min_distance']
+        )
+        
+        det_dir = os.path.join(output_dir, "05_detection")
+        visualize_detection_results(
+            enhanced_frames, all_particles, det_dir,
+            num_samples=parameters['num_sample_frames']
+        )
+        analyze_detection_quality(all_particles, enhanced_frames, detection_params, det_dir)
+        
+        total_detections = sum(len(frame_data['positions']) for frame_data in all_particles.values())
+        
+        results['stage_times']['detection'] = time.time() - stage_start
+        results['stage_results']['detection'] = {
+            'total_detections': total_detections,
+            'frames_with_detections': len([f for f in all_particles.values() if f['positions']]),
+            'detection_params': detection_params
+        }
+        print(f"  Total detections: {total_detections}")
+        
+        # Stage 6: Tracking
+        print("STAGE 6: PARTICLE TRACKING")
+        print("-" * 30)
+        stage_start = time.time()
+        
+        tracking_params = {
+            'max_distance': parameters['max_distance'],
+            'min_track_length': parameters['min_track_length'],
+            'max_frame_gap': parameters['max_frame_gap']
+        }
+        
+        tracks = track_particles_across_frames(all_particles, **tracking_params)
+        tracks = calculate_track_properties(tracks, image_stack)
+        
+        track_dir = os.path.join(output_dir, "06_tracking")
+        visualize_tracking_results(image_stack, tracks, track_dir)
+        analyze_tracking_quality(tracks, all_particles, tracking_params, track_dir)
+        
+        results['stage_times']['tracking'] = time.time() - stage_start
+        results['stage_results']['tracking'] = {
+            'total_tracks': len(tracks),
+            'avg_track_length': np.mean([len(t['frames']) for t in tracks.values()]) if tracks else 0,
+            'tracking_params': tracking_params
+        }
+        
+        # Stage 7: Final Documentation
+        print("STAGE 7: FINAL DOCUMENTATION")
+        print("-" * 30)
+        stage_start = time.time()
+        
+        # Save the parameters
+        with open(os.path.join(output_dir, "pipeline_parameters.txt"), 'w') as f:
+            f.write(f"Pipeline Parameters - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Input: {tiff_file}\n")
+            for key, value in parameters.items():
+                f.write(f"{key}: {value}\n")
+        
+        results['stage_times']['documentation'] = time.time() - stage_start
+        
+        # Pipeline completion
+        total_time = time.time() - start_time
+        results['total_time'] = total_time
+        results['success'] = True
+        
+        print("PIPELINE COMPLETED SUCCESSFULLY")
+        print(f"Results saved to: {output_dir}")
+        
+        # Print summary statistics
+        if tracks:
+            avg_velocity = np.mean([t['avg_velocity'] for t in tracks.values()])
+            avg_displacement = np.mean([t['displacement'] for t in tracks.values()])
+            print(f"Summary: {len(tracks)} tracks, avg velocity: {avg_velocity:.2f} px/frame")
+        
+        return results
+        
+    except Exception as e:
+        print(f"\nPIPELINE FAILED: {str(e)}")
+        print(f"Error occurred after {time.time() - start_time:.1f}s")
+        
+        results['success'] = False
+        results['error'] = str(e)
+        results['total_time'] = time.time() - start_time
+        
+        return results
+
+
+if __name__ == "__main__":
+    """
+    Main execution block - modify the parameters below to run the pipeline
+    """
+    
+    # CONFIGURATION - Modify these paths and parameters as needed
+    # ============================================================
+    
+    # Input file path - update with your TIFF file location
+    TIFF_FILE = "data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif"
+    
+    # Output directory - will be auto-generated with timestamp if None
+    OUTPUT_DIR = None
+    
+    # Pipeline parameters - adjust based on your data characteristics
+    PARAMETERS = {
+        # Filter parameters (for ~20px EVs)
+        'filter_radius': 10,          # Bright center radius
+        'filter_size': 41,            # Filter matrix size
+        'filter_sigma': 2.0,          # Gaussian smoothing
+        
+        # Background subtraction
+        'bg_window_size': 15,         # Temporal median window
+        
+        # Enhancement  
+        'blur_kernel_size': 7,        # Noise reduction kernel
+        'clahe_clip_limit': 2.0,      # Contrast enhancement
+        'clahe_grid_size': (8, 8),    # CLAHE tile size
+        
+        # Detection
+        'detection_threshold': 0.35,  # Correlation threshold
+        'min_distance': 30,           # Min separation between detections
+        
+        # Tracking
+        'max_distance': 25,           # Max movement between frames
+        'min_track_length': 5,        # Min detections per track
+        'max_frame_gap': 3,           # Max missing frames in track
+        
+        # Visualization
+        'num_sample_frames': 6,       # Sample frames for plots
+        'num_top_tracks': 5           # Detailed tracks to analyze
+    }
+    
+    # Run the pipeline
+    # ================
+    
+    print("Starting EV Detection Pipeline...")
+    print(f"Input file: {TIFF_FILE}")
+    
+    # Check if input file exists
+    if not os.path.exists(TIFF_FILE):
+        print(f"Error: Input file not found: {TIFF_FILE}")
+        sys.exit(1)
+    
+    # Execute pipeline
+    results = run_ev_detection_pipeline(
+        tiff_file=TIFF_FILE,
+        output_dir=OUTPUT_DIR,
+        parameters=PARAMETERS
+    )
+    
+    # Final status
+    if results['success']:
+        print(f"\nPipeline completed successfully")
+        print(f"Results saved to: {results['output_dir']}")
+    else:
+        print(f"\nPipeline failed: {results.get('error', 'Unknown error')}")
+        print(f"Partial results in: {results['output_dir']}")
