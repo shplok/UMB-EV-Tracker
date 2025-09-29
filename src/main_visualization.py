@@ -439,7 +439,7 @@ def create_summary_document(results: Dict[str, Any], output_dir: str):
 
 if __name__ == "__main__":
     # Configuration
-    TIFF_FILE = "data\\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif"
+    TIFF_FILE = r"UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif"
     
     PARAMETERS = {
         'filter_radius': 10,

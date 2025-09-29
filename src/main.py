@@ -308,7 +308,7 @@ if __name__ == "__main__":
     # ============================================================
     
     # Input file path - update with your TIFF file location
-    TIFF_FILE = "data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif"
+    TIFF_FILE = r"UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif"
     
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
