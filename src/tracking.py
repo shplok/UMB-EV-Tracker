@@ -23,18 +23,7 @@ def track_particles_across_frames(all_particles: Dict[int, Dict[str, List]],
                                 max_distance: int = 25,
                                 min_track_length: int = 5,
                                 max_frame_gap: int = 3) -> Dict[int, Dict[str, Any]]:
-    """
-    Track particles across frames by connecting detections
-    
-    Args:
-        all_particles (Dict): Particle detections from detect_particles_in_all_frames
-        max_distance (int): Maximum distance a particle can move between frames
-        min_track_length (int): Minimum number of frames for a valid track
-        max_frame_gap (int): Maximum frames a track can be missing before termination
-        
-    Returns:
-        Dict[int, Dict[str, Any]]: Dictionary of particle tracks with properties
-    """
+
     print("Tracking particles across frames...")
     num_frames = max(all_particles.keys()) + 1 if all_particles else 0
     
@@ -156,16 +145,7 @@ def track_particles_across_frames(all_particles: Dict[int, Dict[str, List]],
 
 def calculate_track_properties(tracks: Dict[int, Dict[str, Any]], 
                              image_stack: np.ndarray) -> Dict[int, Dict[str, Any]]:
-    """
-    Calculate comprehensive properties for each track
-    
-    Args:
-        tracks (Dict): Track data from track_particles_across_frames
-        image_stack (np.ndarray): Original image stack for intensity measurements
-        
-    Returns:
-        Dict[int, Dict[str, Any]]: Tracks with calculated properties
-    """
+
     print("Calculating track properties...")
     
     for track_id, track in tqdm(tracks.items(), desc="Analyzing tracks"):
