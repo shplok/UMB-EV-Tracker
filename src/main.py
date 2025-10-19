@@ -283,7 +283,7 @@ def run_ev_detection_pipeline(tiff_file: str,
                     tracks=tracks,
                     ground_truth_csv=ground_truth_csv,
                     output_dir=metrics_dir,
-                    distance_threshold=20.0,
+                    distance_threshold=30.0,
                     visualize=True
                 )
                 
