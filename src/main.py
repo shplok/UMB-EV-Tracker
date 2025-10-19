@@ -85,7 +85,7 @@ def run_ev_detection_pipeline(tiff_file: str,
             'blur_kernel_size': 7,
             'clahe_clip_limit': 2.0,
             'clahe_grid_size': (8, 8),
-            'detection_threshold': 0.5,
+            'detection_threshold': 0.6,
             'min_distance': 30,
             'max_distance': 25,
             'min_track_length': 5,
@@ -378,7 +378,7 @@ if __name__ == "__main__":
         'clahe_grid_size': (8, 8),    # CLAHE tile size
         
         # Detection
-        'detection_threshold': 0.5,  # Correlation threshold
+        'detection_threshold': 0.6,  # Correlation threshold
         'min_distance': 30,           # Min separation between detections
         
         # Tracking
