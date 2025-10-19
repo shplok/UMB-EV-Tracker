@@ -37,8 +37,8 @@ from tracking import (
     visualize_tracking_results,
     analyze_tracking_quality
 )
-
 from detection_metrics import evaluate_detections
+
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     """Create a timestamped output directory for results"""
@@ -56,7 +56,8 @@ def create_output_directory(base_dir: str = "ev_detection_results") -> str:
         "03_background_subtraction",
         "04_enhancement",
         "05_detection",
-        "06_tracking"
+        "06_tracking",
+        "07_metrics"
     ]
     
     for subdir in subdirs:
@@ -68,7 +69,8 @@ def create_output_directory(base_dir: str = "ev_detection_results") -> str:
 
 def run_ev_detection_pipeline(tiff_file: str, 
                             output_dir: str = None,
-                            parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+                            parameters: Dict[str, Any] = None,
+                            ground_truth_csv: str = None) -> Dict[str, Any]:
     
     start_time = time.time()
     
@@ -230,7 +232,8 @@ def run_ev_detection_pipeline(tiff_file: str,
         results['stage_results']['detection'] = {
             'total_detections': total_detections,
             'frames_with_detections': len([f for f in all_particles.values() if f['positions']]),
-            'detection_params': detection_params
+            'detection_params': detection_params,
+            'all_particles': all_particles  # Store for metrics evaluation
         }
         print(f"  Total detections: {total_detections}")
         
@@ -259,8 +262,36 @@ def run_ev_detection_pipeline(tiff_file: str,
             'tracking_params': tracking_params
         }
         
-        # Stage 7: Final Documentation
-        print("STAGE 7: FINAL DOCUMENTATION")
+        # Stage 7: Metrics Evaluation (if ground truth provided)
+        if ground_truth_csv is not None:
+            print("STAGE 7: METRICS EVALUATION")
+            print("-" * 30)
+            stage_start = time.time()
+            
+            metrics_dir = os.path.join(output_dir, "07_metrics")
+            
+            try:
+                metrics_results = evaluate_detections(
+                    all_particles=all_particles,
+                    ground_truth_csv=ground_truth_csv,
+                    output_dir=metrics_dir,
+                    distance_threshold=10.0,
+                    visualize=True
+                )
+                
+                results['stage_times']['metrics'] = time.time() - stage_start
+                results['stage_results']['metrics'] = metrics_results
+                
+                print(f"\n  mAP: {metrics_results['mAP']:.4f}")
+                print(f"  AUC: {metrics_results['AUC']:.4f}")
+                print(f"  Best F1: {metrics_results['best_f1']:.4f} @ threshold {metrics_results['best_threshold']:.3f}")
+                
+            except Exception as e:
+                print(f"  Warning: Metrics evaluation failed: {str(e)}")
+                results['stage_results']['metrics'] = {'error': str(e)}
+        
+        # Stage 8: Final Documentation
+        print("\nSTAGE 8: FINAL DOCUMENTATION")
         print("-" * 30)
         stage_start = time.time()
         
@@ -268,6 +299,9 @@ def run_ev_detection_pipeline(tiff_file: str,
         with open(os.path.join(output_dir, "pipeline_parameters.txt"), 'w') as f:
             f.write(f"Pipeline Parameters - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Input: {tiff_file}\n")
+            if ground_truth_csv:
+                f.write(f"Ground Truth: {ground_truth_csv}\n")
+            f.write("\n")
             for key, value in parameters.items():
                 f.write(f"{key}: {value}\n")
         
@@ -278,14 +312,25 @@ def run_ev_detection_pipeline(tiff_file: str,
         results['total_time'] = total_time
         results['success'] = True
         
+        print("\n" + "="*60)
         print("PIPELINE COMPLETED SUCCESSFULLY")
+        print("="*60)
+        print(f"Total runtime: {total_time:.1f} seconds")
         print(f"Results saved to: {output_dir}")
         
         # Print summary statistics
         if tracks:
             avg_velocity = np.mean([t['avg_velocity'] for t in tracks.values()])
-            avg_displacement = np.mean([t['displacement'] for t in tracks.values()])
-            print(f"Summary: {len(tracks)} tracks, avg velocity: {avg_velocity:.2f} px/frame")
+            print(f"\nSummary:")
+            print(f"  Total detections: {total_detections}")
+            print(f"  Total tracks: {len(tracks)}")
+            print(f"  Avg velocity: {avg_velocity:.2f} px/frame")
+        
+        if 'metrics' in results['stage_results'] and 'mAP' in results['stage_results']['metrics']:
+            metrics = results['stage_results']['metrics']
+            print(f"\nDetection Performance:")
+            print(f"  mAP: {metrics['mAP']:.4f}")
+            print(f"  AUC: {metrics['AUC']:.4f}")
         
         return results
         
@@ -310,6 +355,9 @@ if __name__ == "__main__":
     
     # Input file path - update with TIFF file location
     TIFF_FILE = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif"
+    
+    # Ground truth CSV (optional - set to None if not available)
+    GROUND_TRUTH_CSV = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv"
     
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
@@ -348,34 +396,32 @@ if __name__ == "__main__":
     
     print("Starting EV Detection Pipeline...")
     print(f"Input file: {TIFF_FILE}")
+    if GROUND_TRUTH_CSV:
+        print(f"Ground truth: {GROUND_TRUTH_CSV}")
     
     # Check if input file exists
     if not os.path.exists(TIFF_FILE):
         print(f"Error: Input file not found: {TIFF_FILE}")
         sys.exit(1)
     
+    # Check if ground truth exists (if specified)
+    if GROUND_TRUTH_CSV and not os.path.exists(GROUND_TRUTH_CSV):
+        print(f"Warning: Ground truth file not found: {GROUND_TRUTH_CSV}")
+        print("Continuing without metrics evaluation...")
+        GROUND_TRUTH_CSV = None
+    
     # Execute pipeline
     results = run_ev_detection_pipeline(
         tiff_file=TIFF_FILE,
         output_dir=OUTPUT_DIR,
-        parameters=PARAMETERS
+        parameters=PARAMETERS,
+        ground_truth_csv=GROUND_TRUTH_CSV
     )
-
-    results = evaluate_detections(
-    all_particles=all_particles,
-    ground_truth_csv='UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv',
-    output_dir=output_dir,
-    distance_threshold=10.0,  # pixels for matching detection to GT
-    visualize=True
-    )
-
-    print(f"mAP: {results['mAP']:.4f}")
-    print(f"AUC: {results['AUC']:.4f}")
     
     # Final status
     if results['success']:
-        print(f"\nPipeline completed successfully")
-        print(f"Results saved to: {results['output_dir']}")
+        print(f"\n Pipeline completed successfully")
+        print(f"  Results directory: {results['output_dir']}")
     else:
-        print(f"\nPipeline failed: {results.get('error', 'Unknown error')}")
-        print(f"Partial results in: {results['output_dir']}")
+        print(f"\n Pipeline failed: {results.get('error', 'Unknown error')}")
+        print(f"  Partial results in: {results['output_dir']}")
