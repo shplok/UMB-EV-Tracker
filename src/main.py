@@ -38,6 +38,7 @@ from tracking import (
     analyze_tracking_quality
 )
 
+from detection_metrics import evaluate_detections
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     """Create a timestamped output directory for results"""
@@ -307,8 +308,8 @@ if __name__ == "__main__":
     # CONFIGURATION - Modify these paths and parameters as needed
     # ============================================================
     
-    # Input file path - update with your TIFF file location
-    TIFF_FILE = r"UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif"
+    # Input file path - update with TIFF file location
+    TIFF_FILE = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif"
     
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
@@ -359,6 +360,17 @@ if __name__ == "__main__":
         output_dir=OUTPUT_DIR,
         parameters=PARAMETERS
     )
+
+    results = evaluate_detections(
+    all_particles=all_particles,
+    ground_truth_csv='UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv',
+    output_dir=output_dir,
+    distance_threshold=10.0,  # pixels for matching detection to GT
+    visualize=True
+    )
+
+    print(f"mAP: {results['mAP']:.4f}")
+    print(f"AUC: {results['AUC']:.4f}")
     
     # Final status
     if results['success']:
