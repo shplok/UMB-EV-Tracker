@@ -85,7 +85,7 @@ def run_ev_detection_pipeline(tiff_file: str,
             'blur_kernel_size': 7,
             'clahe_clip_limit': 2.0,
             'clahe_grid_size': (8, 8),
-            'detection_threshold': 0.35,
+            'detection_threshold': 0.5,
             'min_distance': 30,
             'max_distance': 25,
             'min_track_length': 5,
@@ -362,7 +362,7 @@ if __name__ == "__main__":
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
     
-    # Pipeline parameters - adjust based on your data characteristics
+    # Pipeline parameters - adjust based on data characteristics
     PARAMETERS = {
         # Filter parameters (for ~20px EVs)
         'filter_radius': 10,          # Bright center radius
@@ -378,7 +378,7 @@ if __name__ == "__main__":
         'clahe_grid_size': (8, 8),    # CLAHE tile size
         
         # Detection
-        'detection_threshold': 0.35,  # Correlation threshold
+        'detection_threshold': 0.5,  # Correlation threshold
         'min_distance': 30,           # Min separation between detections
         
         # Tracking
