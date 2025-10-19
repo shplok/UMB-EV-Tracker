@@ -371,7 +371,7 @@ def create_track_overview(image_stack: np.ndarray,
     
     # Add legend
     legend_y = 30
-    cv2.putText(frame_rgb, f"Showing top {tracks_drawn} tracks (score > 0.3)", 
+    cv2.putText(frame_rgb, f"Showing top {tracks_drawn} tracks (score > 0.6)", 
                (10, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
     cv2.putText(frame_rgb, "● = start, ⊗ = end", 
                (10, legend_y + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
