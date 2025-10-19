@@ -1,16 +1,3 @@
-"""
-Simple Detection Metrics Module for EV Detection Pipeline
-
-Calculates mAP (mean Average Precision) and AUC (Area Under Curve) for detection performance
-using ground truth data from CSV files.
-
-Functions:
-- load_ground_truth_csv(): Load ground truth from CSV
-- calculate_map(): Calculate mean Average Precision
-- calculate_precision_recall_curve(): Generate precision-recall data
-- evaluate_detections(): Main evaluation function
-"""
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -21,51 +8,33 @@ import os
 
 def load_ground_truth_csv(csv_path: str) -> Dict[int, List[Tuple[float, float]]]:
     """
-    Load ground truth from CSV file
-    
-    Supports multiple CSV formats:
-    - Format 1: Slice, X_COM, Y_COM columns
-    - Format 2: Slice, X_COM, Y_COM with other columns (Area, Mean, etc.)
-    
-    Args:
-        csv_path: Path to ground truth CSV file
-    
-    Returns:
-        Dictionary mapping frame indices to list of (x, y) positions
+    Load and normalize ground truth CSV.
+    Works with non-contiguous Slice values like 239–314.
     """
     print(f"Loading ground truth from: {csv_path}")
-    
     df = pd.read_csv(csv_path)
-    
-    # Check which columns are available
+
+    # Check required columns
     required_cols = ['Slice', 'X_COM', 'Y_COM']
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    
-    if missing_cols:
-        raise ValueError(f"CSV missing required columns: {missing_cols}. "
-                        f"Available columns: {list(df.columns)}")
-    
-    print(f"CSV format detected with columns: {list(df.columns)}")
-    
-    # Group by Slice (frame number) and extract positions
-    ground_truth = {}
-    
-    for slice_num in df['Slice'].unique():
-        frame_particles = df[df['Slice'] == slice_num]
-        positions = list(zip(frame_particles['X_COM'], frame_particles['Y_COM']))
-        ground_truth[slice_num] = positions
-    
-    total_particles = len(df)
-    num_frames = len(ground_truth)
-    
-    print(f"Loaded {total_particles} ground truth particles across {num_frames} frames")
-    print(f"Average particles per frame: {total_particles/num_frames:.1f}")
-    
-    # Print frame range for verification
-    frame_range = f"{min(ground_truth.keys())} to {max(ground_truth.keys())}"
-    print(f"Frame range: {frame_range}")
-    
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Missing required column '{col}' in CSV.")
+
+    # Normalize frame numbering to start at 0, contiguous
+    unique_slices = sorted(df['Slice'].unique())
+    slice_to_index = {s: i for i, s in enumerate(unique_slices)}
+    df['FrameIndex'] = df['Slice'].map(slice_to_index)
+
+    ground_truth = {
+        int(frame): list(zip(frame_df['X_COM'], frame_df['Y_COM']))
+        for frame, frame_df in df.groupby('FrameIndex')
+    }
+
+    print(f"Loaded {len(df)} GT points across {len(ground_truth)} frames.")
+    print(f"Original Slice range: {min(unique_slices)}–{max(unique_slices)}")
+    print(f"Normalized FrameIndex range: {min(ground_truth.keys())}–{max(ground_truth.keys())}")
     return ground_truth
+
 
 
 def match_detections_to_ground_truth(detections: List[Tuple[float, float]],
