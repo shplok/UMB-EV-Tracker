@@ -1,295 +1,362 @@
+"""
+Tracking Metrics Module for EV Detection Pipeline
+
+Evaluates tracking performance when ground truth represents a single particle
+tracked across multiple frames (as opposed to multiple separate particles).
+
+Functions:
+- evaluate_tracking_performance(): Main evaluation for tracked particles
+- calculate_frame_detection_rate(): Per-frame detection success
+- calculate_position_accuracy(): Spatial accuracy of detections
+- match_track_to_ground_truth(): Find which track corresponds to GT
+"""
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 from scipy.spatial.distance import cdist
 import os
 
 
-def load_ground_truth_csv(csv_path: str) -> Dict[int, List[Tuple[float, float]]]:
+def load_ground_truth_track(csv_path: str) -> Dict[str, Any]:
     """
-    Load and normalize ground truth CSV.
-    Works with non-contiguous Slice values like 239–314.
+    Load ground truth for a tracked particle
+    
+    Returns:
+        Dictionary with 'frames', 'positions', and metadata
     """
-    print(f"Loading ground truth from: {csv_path}")
+    print(f"Loading ground truth track from: {csv_path}")
+    
     df = pd.read_csv(csv_path)
-
-    # Check required columns
-    required_cols = ['Slice', 'X_COM', 'Y_COM']
-    for col in required_cols:
-        if col not in df.columns:
-            raise ValueError(f"Missing required column '{col}' in CSV.")
-
-    # Normalize frame numbering to start at 0, contiguous
-    unique_slices = sorted(df['Slice'].unique())
-    slice_to_index = {s: i for i, s in enumerate(unique_slices)}
-    df['FrameIndex'] = df['Slice'].map(slice_to_index)
-
-    ground_truth = {
-        int(frame): list(zip(frame_df['X_COM'], frame_df['Y_COM']))
-        for frame, frame_df in df.groupby('FrameIndex')
+    
+    # Check for EV_ID to determine if multiple particles
+    if 'EV_ID' in df.columns:
+        unique_ids = df['EV_ID'].nunique()
+        print(f"Found {unique_ids} unique particle ID(s) in ground truth")
+        
+        if unique_ids > 1:
+            print(f"Warning: Multiple particles detected. Using first particle (ID={df['EV_ID'].iloc[0]})")
+            df = df[df['EV_ID'] == df['EV_ID'].iloc[0]]
+    
+    # Extract frame numbers and positions - KEEP ORIGINAL SLICE NUMBERS
+    frames = df['Slice'].values
+    positions = list(zip(df['X_COM'].values, df['Y_COM'].values))
+    
+    gt_track = {
+        'frames': frames,
+        'positions': positions,
+        'start_frame': int(frames.min()),
+        'end_frame': int(frames.max()),
+        'num_frames': len(frames),
+        'particle_id': df['EV_ID'].iloc[0] if 'EV_ID' in df.columns else 1
     }
+    
+    print(f"Ground truth track: {gt_track['num_frames']} frames "
+          f"({gt_track['start_frame']} to {gt_track['end_frame']})")
+    
+    return gt_track
 
-    print(f"Loaded {len(df)} GT points across {len(ground_truth)} frames.")
-    print(f"Original Slice range: {min(unique_slices)}–{max(unique_slices)}")
-    print(f"Normalized FrameIndex range: {min(ground_truth.keys())}–{max(ground_truth.keys())}")
-    return ground_truth
 
-
-
-def match_detections_to_ground_truth(detections: List[Tuple[float, float]],
-                                     detection_scores: List[float],
-                                     ground_truth: List[Tuple[float, float]],
-                                     distance_threshold: float = 10.0) -> Tuple[List[bool], List[float]]:
+def match_track_to_ground_truth(tracks: Dict[int, Dict[str, Any]],
+                                gt_track: Dict[str, Any],
+                                distance_threshold: float = 50.0) -> Tuple[Optional[int], float]:
     """
-    Match detections to ground truth using distance threshold
+    Find which detected track best matches the ground truth track
     
     Args:
-        detections: List of (x, y) detection positions
-        detection_scores: Confidence scores for each detection
-        ground_truth: List of (x, y) ground truth positions
-        distance_threshold: Maximum distance for a match (pixels)
+        tracks: All detected tracks
+        gt_track: Ground truth track data
+        distance_threshold: Max average distance to consider a match
     
     Returns:
-        (match_flags, scores) where match_flags[i] is True if detection i matched GT
+        (best_track_id, avg_distance) or (None, inf) if no match
     """
-    if len(detections) == 0:
-        return [], []
+    if not tracks:
+        return None, float('inf')
     
-    if len(ground_truth) == 0:
-        # No ground truth, all detections are false positives
-        return [False] * len(detections), detection_scores
+    gt_positions = np.array(gt_track['positions'])
+    gt_frames = set(gt_track['frames'])
     
-    # Calculate distance matrix
-    det_array = np.array(detections)
-    gt_array = np.array(ground_truth)
-    distances = cdist(det_array, gt_array, metric='euclidean')
+    best_track_id = None
+    best_avg_distance = float('inf')
     
-    # Match each detection to nearest GT if within threshold
-    matched_gt = set()
-    match_flags = []
-    
-    for i in range(len(detections)):
-        min_dist_idx = np.argmin(distances[i])
-        min_dist = distances[i, min_dist_idx]
+    for track_id, track in tracks.items():
+        # Find overlapping frames
+        track_frames = set(track['frames'])
+        overlap_frames = gt_frames.intersection(track_frames)
         
-        if min_dist <= distance_threshold and min_dist_idx not in matched_gt:
-            match_flags.append(True)
-            matched_gt.add(min_dist_idx)
+        if len(overlap_frames) < 3:  # Need at least 3 overlapping frames
+            continue
+        
+        # Calculate distances for overlapping frames
+        distances = []
+        for frame in overlap_frames:
+            gt_idx = np.where(gt_track['frames'] == frame)[0][0]
+            track_idx = track['frames'].index(frame)
+            
+            gt_pos = gt_positions[gt_idx]
+            track_pos = track['positions'][track_idx]
+            
+            dist = np.sqrt((gt_pos[0] - track_pos[0])**2 + (gt_pos[1] - track_pos[1])**2)
+            distances.append(dist)
+        
+        avg_distance = np.mean(distances)
+        
+        if avg_distance < best_avg_distance and avg_distance < distance_threshold:
+            best_avg_distance = avg_distance
+            best_track_id = track_id
+    
+    return best_track_id, best_avg_distance
+
+
+def calculate_frame_detection_rate(all_particles: Dict[int, Dict[str, List]],
+                                   gt_track: Dict[str, Any],
+                                   distance_threshold: float = 20.0) -> Dict[str, Any]:
+    """
+    Calculate per-frame detection success rate
+    Only evaluates frames where GT exists AND detections were performed
+    """
+    print(f"Calculating frame detection rate (threshold={distance_threshold}px)...")
+    
+    gt_frames = gt_track['frames']  # These are actual Slice numbers (239-314)
+    gt_positions = np.array(gt_track['positions'])
+    
+    detected_frames = []
+    missed_frames = []
+    detection_distances = []
+    detection_scores = []
+    
+    for i, frame in enumerate(gt_frames):
+        gt_pos = gt_positions[i]
+        
+        # Check if this GT frame exists in our detections
+        # GT frame 239 should match detection frame 239
+        if frame not in all_particles:
+            missed_frames.append(frame)
+            continue
+        
+        # Check if any detection is close to GT position
+        frame_detections = all_particles[frame]['positions']
+        frame_scores = all_particles[frame]['scores']
+        
+        if not frame_detections:
+            missed_frames.append(frame)
+            continue
+        
+        # Find closest detection
+        det_array = np.array(frame_detections)
+        distances = np.sqrt(np.sum((det_array - gt_pos)**2, axis=1))
+        min_dist_idx = np.argmin(distances)
+        min_dist = distances[min_dist_idx]
+        
+        if min_dist <= distance_threshold:
+            detected_frames.append(frame)
+            detection_distances.append(min_dist)
+            detection_scores.append(frame_scores[min_dist_idx])
         else:
-            match_flags.append(False)
+            missed_frames.append(frame)
     
-    return match_flags, detection_scores
-
-
-def calculate_precision_recall_curve(all_particles: Dict[int, Dict[str, List]],
-                                     ground_truth: Dict[int, List[Tuple[float, float]]],
-                                     distance_threshold: float = 10.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Calculate precision-recall curve by varying score threshold
+    # Calculate summary statistics AFTER the loop
+    num_detected = len(detected_frames)
+    num_missed = len(missed_frames)
+    total_frames = len(gt_frames)
     
-    Returns:
-        (precisions, recalls, thresholds)
-    """
-    print("Calculating precision-recall curve...")
+    detection_rate = num_detected / total_frames if total_frames > 0 else 0
     
-    # Collect all detections across all frames with their scores
-    all_detections = []
-    
-    for frame_idx, frame_data in all_particles.items():
-        positions = frame_data['positions']
-        scores = frame_data['scores']
-        gt = ground_truth.get(frame_idx, [])
-        
-        # Match detections to ground truth
-        match_flags, det_scores = match_detections_to_ground_truth(
-            positions, scores, gt, distance_threshold
-        )
-        
-        for pos, score, is_match in zip(positions, det_scores, match_flags):
-            all_detections.append({
-                'score': score,
-                'is_true_positive': is_match,
-                'frame': frame_idx
-            })
-    
-    # Sort detections by score (descending)
-    all_detections.sort(key=lambda x: x['score'], reverse=True)
-    
-    # Calculate total number of ground truth objects
-    total_gt = sum(len(gt_list) for gt_list in ground_truth.values())
-    
-    # Calculate precision and recall at each threshold
-    precisions = []
-    recalls = []
-    thresholds = []
-    
-    tp_cumsum = 0
-    fp_cumsum = 0
-    
-    for i, detection in enumerate(all_detections):
-        if detection['is_true_positive']:
-            tp_cumsum += 1
-        else:
-            fp_cumsum += 1
-        
-        precision = tp_cumsum / (tp_cumsum + fp_cumsum)
-        recall = tp_cumsum / total_gt if total_gt > 0 else 0
-        
-        precisions.append(precision)
-        recalls.append(recall)
-        thresholds.append(detection['score'])
-    
-    return np.array(precisions), np.array(recalls), np.array(thresholds)
-
-
-def calculate_average_precision(precisions: np.ndarray, recalls: np.ndarray) -> float:
-    """
-    Calculate Average Precision (AP) using the 11-point interpolation method
-    """
-    # Use 11-point interpolation
-    ap = 0.0
-    for t in np.linspace(0, 1, 11):
-        if np.sum(recalls >= t) == 0:
-            p = 0
-        else:
-            p = np.max(precisions[recalls >= t])
-        ap += p / 11.0
-    
-    return ap
-
-
-def calculate_auc(recalls: np.ndarray, precisions: np.ndarray) -> float:
-    """
-    Calculate Area Under Curve using trapezoidal rule
-    """
-    # Sort by recall
-    sorted_indices = np.argsort(recalls)
-    recalls_sorted = recalls[sorted_indices]
-    precisions_sorted = precisions[sorted_indices]
-    
-    # Calculate AUC using trapezoidal rule
-    auc = np.trapz(precisions_sorted, recalls_sorted)
-    
-    return auc
-
-
-def calculate_map(all_particles: Dict[int, Dict[str, List]],
-                 ground_truth: Dict[int, List[Tuple[float, float]]],
-                 distance_threshold: float = 10.0,
-                 iou_thresholds: List[float] = None) -> Dict[str, float]:
-    """
-    Calculate mean Average Precision (mAP)
-    
-    For detection tasks, we use distance threshold instead of IoU.
-    mAP is calculated as AP averaged over multiple thresholds.
-    """
-    print(f"Calculating mAP with distance threshold: {distance_threshold}px")
-    
-    if iou_thresholds is None:
-        # Use single threshold for simplicity
-        iou_thresholds = [distance_threshold]
-    
-    aps = []
-    
-    for threshold in iou_thresholds:
-        precisions, recalls, _ = calculate_precision_recall_curve(
-            all_particles, ground_truth, threshold
-        )
-        
-        if len(precisions) > 0:
-            ap = calculate_average_precision(precisions, recalls)
-            aps.append(ap)
-            print(f"  AP @ {threshold}px: {ap:.4f}")
-    
-    map_score = np.mean(aps) if aps else 0.0
-    
-    return {
-        'mAP': map_score,
-        'AP_per_threshold': dict(zip(iou_thresholds, aps))
+    results = {
+        'detection_rate': detection_rate,
+        'frames_detected': num_detected,
+        'frames_missed': num_missed,
+        'total_frames': total_frames,
+        'detected_frame_list': detected_frames,
+        'missed_frame_list': missed_frames,
+        'avg_detection_distance': np.mean(detection_distances) if detection_distances else 0,
+        'std_detection_distance': np.std(detection_distances) if detection_distances else 0,
+        'avg_detection_score': np.mean(detection_scores) if detection_scores else 0,
+        'detection_distances': detection_distances,
+        'detection_scores': detection_scores
     }
+    
+    print(f"  Detected in {num_detected}/{total_frames} frames ({detection_rate*100:.1f}%)")
+    print(f"  Avg position error: {results['avg_detection_distance']:.2f}px")
+    print(f"  Avg detection score: {results['avg_detection_score']:.3f}")
+    
+    return results
 
 
-def evaluate_detections(all_particles: Dict[int, Dict[str, List]],
-                       ground_truth_csv: str,
-                       output_dir: str,
-                       distance_threshold: float = 10.0,
-                       visualize: bool = True) -> Dict[str, Any]:
+def calculate_track_metrics(matched_track: Dict[str, Any],
+                            gt_track: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Main evaluation function - calculates mAP and AUC
+    Calculate metrics for the matched track
     
     Args:
-        all_particles: Detection results from pipeline
-        ground_truth_csv: Path to ground truth CSV file
+        matched_track: The detected track that matches GT
+        gt_track: Ground truth track
+    
+    Returns:
+        Dictionary with track quality metrics
+    """
+    print("Calculating track quality metrics...")
+    
+    # Frame overlap
+    track_frames = set(matched_track['frames'])
+    gt_frames = set(gt_track['frames'])
+    overlap_frames = track_frames.intersection(gt_frames)
+    
+    track_recall = len(overlap_frames) / len(gt_frames) if gt_frames else 0
+    track_precision = len(overlap_frames) / len(track_frames) if track_frames else 0
+    
+    # Position accuracy for overlapping frames
+    position_errors = []
+    gt_positions = np.array(gt_track['positions'])
+    
+    for frame in overlap_frames:
+        gt_idx = np.where(gt_track['frames'] == frame)[0][0]
+        track_idx = matched_track['frames'].index(frame)
+        
+        gt_pos = gt_positions[gt_idx]
+        track_pos = matched_track['positions'][track_idx]
+        
+        error = np.sqrt((gt_pos[0] - track_pos[0])**2 + (gt_pos[1] - track_pos[1])**2)
+        position_errors.append(error)
+    
+    # Track continuity (gaps)
+    track_frame_nums = sorted(matched_track['frames'])
+    gaps = []
+    for i in range(len(track_frame_nums) - 1):
+        gap = track_frame_nums[i+1] - track_frame_nums[i] - 1
+        if gap > 0:
+            gaps.append(gap)
+    
+    results = {
+        'track_recall': track_recall,
+        'track_precision': track_precision,
+        'track_f1': 2 * (track_precision * track_recall) / (track_precision + track_recall + 1e-10),
+        'frames_in_track': len(track_frames),
+        'frames_in_gt': len(gt_frames),
+        'overlapping_frames': len(overlap_frames),
+        'avg_position_error': np.mean(position_errors) if position_errors else 0,
+        'max_position_error': np.max(position_errors) if position_errors else 0,
+        'std_position_error': np.std(position_errors) if position_errors else 0,
+        'num_gaps': len(gaps),
+        'avg_gap_size': np.mean(gaps) if gaps else 0,
+        'max_gap_size': max(gaps) if gaps else 0,
+        'track_length': len(matched_track['frames']),
+        'avg_velocity': matched_track.get('avg_velocity', 0),
+        'avg_score': matched_track.get('avg_detection_score', 0)
+    }
+    
+    print(f"  Track recall: {track_recall*100:.1f}%")
+    print(f"  Track precision: {track_precision*100:.1f}%")
+    print(f"  Avg position error: {results['avg_position_error']:.2f}px")
+    print(f"  Track gaps: {results['num_gaps']}")
+    
+    return results
+
+
+def evaluate_tracking_performance(all_particles: Dict[int, Dict[str, List]],
+                                  tracks: Dict[int, Dict[str, Any]],
+                                  ground_truth_csv: str,
+                                  output_dir: str,
+                                  distance_threshold: float = 10.0,
+                                  visualize: bool = True) -> Dict[str, Any]:
+    """
+    Main evaluation function for tracking a single particle
+    
+    Args:
+        all_particles: Detection results
+        tracks: Tracking results
+        ground_truth_csv: Path to ground truth CSV
         output_dir: Directory to save results
-        distance_threshold: Maximum distance for matching (pixels)
+        distance_threshold: Distance threshold for matching (pixels)
         visualize: Whether to create visualizations
     
     Returns:
-        Dictionary with evaluation metrics
+        Dictionary with all evaluation metrics
     """
     print("\n" + "="*80)
-    print("DETECTION EVALUATION - mAP and AUC")
+    print("TRACKING EVALUATION - Single Particle Tracking")
     print("="*80 + "\n")
     
     # Load ground truth
-    ground_truth = load_ground_truth_csv(ground_truth_csv)
+    gt_track = load_ground_truth_track(ground_truth_csv)
     
-    # Calculate precision-recall curve
-    precisions, recalls, thresholds = calculate_precision_recall_curve(
-        all_particles, ground_truth, distance_threshold
+    # Calculate frame-by-frame detection rate
+    frame_metrics = calculate_frame_detection_rate(
+        all_particles, gt_track, distance_threshold
+    )
+
+    print("\nDEBUG - Checking GT frame range:")
+    for frame in range(239, 245):  # Check first 6 GT frames
+        if frame in all_particles:
+            print(f"  Frame {frame}: {len(all_particles[frame]['positions'])} detections")
+        else:
+            print(f"  Frame {frame}: NOT IN all_particles dict")
+    
+    # Match tracks to ground truth
+    matched_track_id, match_distance = match_track_to_ground_truth(
+        tracks, gt_track, distance_threshold=50.0
     )
     
-    # Calculate metrics
-    map_results = calculate_map(all_particles, ground_truth, distance_threshold)
-    auc = calculate_auc(recalls, precisions)
-    
-    # Calculate additional metrics at best threshold
-    if len(thresholds) > 0:
-        # Find threshold with best F1 score
-        f1_scores = 2 * (precisions * recalls) / (precisions + recalls + 1e-10)
-        best_idx = np.argmax(f1_scores)
-        best_threshold = thresholds[best_idx]
-        best_precision = precisions[best_idx]
-        best_recall = recalls[best_idx]
-        best_f1 = f1_scores[best_idx]
+    if matched_track_id is not None:
+        print(f"\nMatched track ID: {matched_track_id} (avg distance: {match_distance:.2f}px)")
+        matched_track = tracks[matched_track_id]
+        
+        track_metrics = calculate_track_metrics(matched_track, gt_track)
     else:
-        best_threshold = 0.0
-        best_precision = 0.0
-        best_recall = 0.0
-        best_f1 = 0.0
+        print("\nWarning: No track matched ground truth!")
+        track_metrics = {
+            'track_recall': 0,
+            'track_precision': 0,
+            'track_f1': 0,
+            'avg_position_error': float('inf')
+        }
     
+    # Compile results
     results = {
-        'mAP': map_results['mAP'],
-        'AUC': auc,
-        'best_threshold': best_threshold,
-        'best_precision': best_precision,
-        'best_recall': best_recall,
-        'best_f1': best_f1,
-        'precisions': precisions,
-        'recalls': recalls,
-        'thresholds': thresholds,
-        'distance_threshold': distance_threshold
+        'frame_detection_rate': frame_metrics['detection_rate'],
+        'frames_detected': frame_metrics['frames_detected'],
+        'frames_missed': frame_metrics['frames_missed'],
+        'total_gt_frames': frame_metrics['total_frames'],
+        'avg_position_error': frame_metrics['avg_detection_distance'],
+        'std_position_error': frame_metrics['std_detection_distance'],
+        'avg_detection_score': frame_metrics['avg_detection_score'],
+        'matched_track_id': matched_track_id,
+        'track_match_distance': match_distance,
+        'distance_threshold': distance_threshold,
+        'frame_metrics': frame_metrics,
+        'track_metrics': track_metrics if matched_track_id else None,
+        'ground_truth': gt_track
     }
     
-    # Print results
-    print("\nRESULTS:")
-    print("-"*80)
-    print(f"mAP (mean Average Precision): {map_results['mAP']:.4f}")
-    print(f"AUC (Area Under PR Curve):    {auc:.4f}")
-    print(f"\nBest Operating Point (max F1):")
-    print(f"  Threshold: {best_threshold:.3f}")
-    print(f"  Precision: {best_precision:.3f}")
-    print(f"  Recall:    {best_recall:.3f}")
-    print(f"  F1 Score:  {best_f1:.3f}")
+    # Print summary
+    print("\n" + "="*80)
+    print("TRACKING PERFORMANCE SUMMARY")
+    print("="*80)
+    print(f"Frame Detection Rate:  {frame_metrics['detection_rate']*100:.1f}% "
+          f"({frame_metrics['frames_detected']}/{frame_metrics['total_frames']} frames)")
+    print(f"Avg Position Error:    {frame_metrics['avg_detection_distance']:.2f} ± "
+          f"{frame_metrics['std_detection_distance']:.2f} px")
+    print(f"Avg Detection Score:   {frame_metrics['avg_detection_score']:.3f}")
+    
+    if matched_track_id:
+        print(f"\nMatched Track #{matched_track_id}:")
+        print(f"  Track Recall:        {track_metrics['track_recall']*100:.1f}%")
+        print(f"  Track Precision:     {track_metrics['track_precision']*100:.1f}%")
+        print(f"  Track F1 Score:      {track_metrics['track_f1']:.3f}")
+        print(f"  Track Length:        {track_metrics['track_length']} frames")
+        print(f"  Track Gaps:          {track_metrics['num_gaps']}")
     
     # Create visualizations
     if visualize:
-        viz_path = visualize_pr_curve(results, output_dir)
-        results['visualization_path'] = viz_path
+        viz_paths = visualize_tracking_performance(
+            results, all_particles, tracks, output_dir
+        )
+        results['visualization_paths'] = viz_paths
         
-        # Save detailed report
-        report_path = save_evaluation_report(results, ground_truth, all_particles, output_dir)
+        # Save report
+        report_path = save_tracking_report(results, output_dir)
         results['report_path'] = report_path
     
     print("\n" + "="*80)
@@ -299,109 +366,159 @@ def evaluate_detections(all_particles: Dict[int, Dict[str, List]],
     return results
 
 
-def visualize_pr_curve(results: Dict[str, Any], output_dir: str) -> str:
+def visualize_tracking_performance(results: Dict[str, Any],
+                                   all_particles: Dict[int, Dict[str, List]],
+                                   tracks: Dict[int, Dict[str, Any]],
+                                   output_dir: str) -> List[str]:
     """
-    Create precision-recall curve visualization
+    Create visualizations for tracking performance
     """
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    viz_paths = []
     
-    # Precision-Recall Curve
-    ax1 = axes[0]
-    ax1.plot(results['recalls'], results['precisions'], 'b-', linewidth=2, label='PR Curve')
-    ax1.scatter([results['best_recall']], [results['best_precision']], 
-               c='red', s=100, zorder=5, label=f'Best F1 (threshold={results["best_threshold"]:.3f})')
-    ax1.fill_between(results['recalls'], results['precisions'], alpha=0.3)
+    # Figure 1: Detection rate and position error over time
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
-    ax1.set_xlabel('Recall', fontsize=12)
-    ax1.set_ylabel('Precision', fontsize=12)
-    ax1.set_title(f'Precision-Recall Curve\nAUC = {results["AUC"]:.4f}, mAP = {results["mAP"]:.4f}', 
-                 fontsize=14, fontweight='bold')
-    ax1.set_xlim([0, 1])
-    ax1.set_ylim([0, 1])
+    gt_track = results['ground_truth']
+    frame_metrics = results['frame_metrics']
+    
+    # Plot 1: Frame detection status
+    ax1 = axes[0, 0]
+    all_frames = gt_track['frames']
+    detected = [1 if f in frame_metrics['detected_frame_list'] else 0 for f in all_frames]
+    
+    colors = ['green' if d else 'red' for d in detected]
+    ax1.scatter(all_frames, detected, c=colors, s=50, alpha=0.7)
+    ax1.set_xlabel('Frame Number')
+    ax1.set_ylabel('Detected (1) / Missed (0)')
+    ax1.set_title(f'Frame-by-Frame Detection Status\nDetection Rate: {results["frame_detection_rate"]*100:.1f}%')
+    ax1.set_ylim([-0.2, 1.2])
     ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='best')
     
-    # F1 Score vs Threshold
-    ax2 = axes[1]
-    if len(results['thresholds']) > 0:
-        f1_scores = 2 * (results['precisions'] * results['recalls']) / \
-                   (results['precisions'] + results['recalls'] + 1e-10)
-        
-        ax2.plot(results['thresholds'], f1_scores, 'g-', linewidth=2, label='F1 Score')
-        ax2.plot(results['thresholds'], results['precisions'], 'b--', alpha=0.7, label='Precision')
-        ax2.plot(results['thresholds'], results['recalls'], 'r--', alpha=0.7, label='Recall')
-        ax2.axvline(results['best_threshold'], color='black', linestyle=':', 
-                   linewidth=2, label=f'Best threshold: {results["best_threshold"]:.3f}')
-        
-        ax2.set_xlabel('Detection Threshold', fontsize=12)
-        ax2.set_ylabel('Score', fontsize=12)
-        ax2.set_title(f'Metrics vs Threshold\nBest F1 = {results["best_f1"]:.3f}', 
-                     fontsize=14, fontweight='bold')
-        ax2.set_xlim([0, 1])
-        ax2.set_ylim([0, 1])
+    # Plot 2: Position errors over time
+    ax2 = axes[0, 1]
+    if frame_metrics['detection_distances']:
+        detected_frames = frame_metrics['detected_frame_list']
+        ax2.plot(detected_frames, frame_metrics['detection_distances'], 'b-o', markersize=4)
+        ax2.axhline(results['avg_position_error'], color='red', linestyle='--',
+                   label=f'Avg: {results["avg_position_error"]:.2f}px')
+        ax2.axhline(results['distance_threshold'], color='orange', linestyle=':',
+                   label=f'Threshold: {results["distance_threshold"]}px')
+        ax2.set_xlabel('Frame Number')
+        ax2.set_ylabel('Position Error (pixels)')
+        ax2.set_title('Detection Position Accuracy Over Time')
+        ax2.legend()
         ax2.grid(True, alpha=0.3)
-        ax2.legend(loc='best')
+    
+    # Plot 3: Detection scores over time
+    ax3 = axes[1, 0]
+    if frame_metrics['detection_scores']:
+        detected_frames = frame_metrics['detected_frame_list']
+        ax3.plot(detected_frames, frame_metrics['detection_scores'], 'g-o', markersize=4)
+        ax3.axhline(results['avg_detection_score'], color='red', linestyle='--',
+                   label=f'Avg: {results["avg_detection_score"]:.3f}')
+        ax3.set_xlabel('Frame Number')
+        ax3.set_ylabel('Detection Score')
+        ax3.set_title('Detection Confidence Over Time')
+        ax3.legend()
+        ax3.grid(True, alpha=0.3)
+    
+    # Plot 4: Performance summary bars
+    ax4 = axes[1, 1]
+    if results['matched_track_id']:
+        tm = results['track_metrics']
+        metrics = ['Detection\nRate', 'Track\nRecall', 'Track\nPrecision', 'Track\nF1']
+        values = [results['frame_detection_rate'], tm['track_recall'], 
+                 tm['track_precision'], tm['track_f1']]
+        
+        bars = ax4.bar(metrics, values, color=['blue', 'green', 'orange', 'red'], alpha=0.7)
+        
+        # Add value labels
+        for bar, val in zip(bars, values):
+            height = bar.get_height()
+            ax4.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{val:.2f}', ha='center', va='bottom', fontweight='bold')
+        
+        ax4.set_ylim([0, 1.1])
+        ax4.set_ylabel('Score')
+        ax4.set_title('Performance Summary')
+        ax4.grid(True, alpha=0.3, axis='y')
     
     plt.tight_layout()
-    
-    viz_path = os.path.join(output_dir, 'detection_evaluation.png')
-    plt.savefig(viz_path, dpi=300, bbox_inches='tight')
+    path1 = os.path.join(output_dir, 'tracking_performance.png')
+    plt.savefig(path1, dpi=300, bbox_inches='tight')
     plt.close()
+    viz_paths.append(path1)
     
-    print(f"Visualization saved: {viz_path}")
-    return viz_path
+    print(f"Visualization saved: {path1}")
+    
+    return viz_paths
 
 
-def save_evaluation_report(results: Dict[str, Any],
-                          ground_truth: Dict[int, List[Tuple[float, float]]],
-                          all_particles: Dict[int, Dict[str, List]],
-                          output_dir: str) -> str:
+def save_tracking_report(results: Dict[str, Any], output_dir: str) -> str:
     """
-    Save detailed evaluation report to text file
+    Save detailed tracking evaluation report
     """
-    report_path = os.path.join(output_dir, 'detection_evaluation_report.txt')
-    
-    # Calculate frame-by-frame statistics
-    total_gt = sum(len(gt_list) for gt_list in ground_truth.values())
-    total_detections = sum(len(frame_data['positions']) for frame_data in all_particles.values())
+    report_path = os.path.join(output_dir, 'tracking_evaluation_report.txt')
     
     with open(report_path, 'w') as f:
         f.write("="*80 + "\n")
-        f.write("DETECTION EVALUATION REPORT\n")
+        f.write("TRACKING EVALUATION REPORT\n")
+        f.write("Single Particle Tracking Performance\n")
         f.write("="*80 + "\n\n")
         
-        f.write("SUMMARY METRICS\n")
+        f.write("FRAME-BY-FRAME DETECTION\n")
         f.write("-"*80 + "\n")
-        f.write(f"mAP (mean Average Precision): {results['mAP']:.4f}\n")
-        f.write(f"AUC (Area Under PR Curve):    {results['AUC']:.4f}\n")
-        f.write(f"Distance Threshold:           {results['distance_threshold']:.1f} pixels\n\n")
+        f.write(f"Detection Rate:        {results['frame_detection_rate']*100:.1f}%\n")
+        f.write(f"Frames Detected:       {results['frames_detected']}/{results['total_gt_frames']}\n")
+        f.write(f"Frames Missed:         {results['frames_missed']}\n")
+        f.write(f"Avg Position Error:    {results['avg_position_error']:.2f} px\n")
+        f.write(f"Std Position Error:    {results['std_position_error']:.2f} px\n")
+        f.write(f"Avg Detection Score:   {results['avg_detection_score']:.3f}\n")
+        f.write(f"Distance Threshold:    {results['distance_threshold']:.1f} px\n\n")
         
-        f.write("BEST OPERATING POINT (Maximum F1 Score)\n")
-        f.write("-"*80 + "\n")
-        f.write(f"Detection Threshold: {results['best_threshold']:.3f}\n")
-        f.write(f"Precision:           {results['best_precision']:.3f}\n")
-        f.write(f"Recall:              {results['best_recall']:.3f}\n")
-        f.write(f"F1 Score:            {results['best_f1']:.3f}\n\n")
-        
-        f.write("DETECTION STATISTICS\n")
-        f.write("-"*80 + "\n")
-        f.write(f"Total Ground Truth Particles: {total_gt}\n")
-        f.write(f"Total Detections:             {total_detections}\n")
-        f.write(f"Detection/GT Ratio:           {total_detections/total_gt:.2f}\n")
-        f.write(f"Frames Evaluated:             {len(ground_truth)}\n\n")
+        if results['matched_track_id']:
+            tm = results['track_metrics']
+            f.write("TRACK QUALITY\n")
+            f.write("-"*80 + "\n")
+            f.write(f"Matched Track ID:      #{results['matched_track_id']}\n")
+            f.write(f"Track Recall:          {tm['track_recall']*100:.1f}%\n")
+            f.write(f"Track Precision:       {tm['track_precision']*100:.1f}%\n")
+            f.write(f"Track F1 Score:        {tm['track_f1']:.3f}\n")
+            f.write(f"Track Length:          {tm['track_length']} frames\n")
+            f.write(f"Overlapping Frames:    {tm['overlapping_frames']}\n")
+            f.write(f"Track Gaps:            {tm['num_gaps']}\n")
+            if tm['num_gaps'] > 0:
+                f.write(f"Avg Gap Size:          {tm['avg_gap_size']:.1f} frames\n")
+                f.write(f"Max Gap Size:          {tm['max_gap_size']} frames\n")
+            f.write(f"Avg Position Error:    {tm['avg_position_error']:.2f} px\n")
+            f.write(f"Max Position Error:    {tm['max_position_error']:.2f} px\n")
+            f.write(f"Avg Velocity:          {tm['avg_velocity']:.2f} px/frame\n")
+            f.write(f"Avg Detection Score:   {tm['avg_score']:.3f}\n\n")
+        else:
+            f.write("TRACK QUALITY\n")
+            f.write("-"*80 + "\n")
+            f.write("No track matched ground truth\n\n")
         
         f.write("INTERPRETATION\n")
         f.write("-"*80 + "\n")
-        if results['mAP'] > 0.8:
-            f.write("Excellent detection performance (mAP > 0.8)\n")
-        elif results['mAP'] > 0.6:
-            f.write("Good detection performance (mAP > 0.6)\n")
-        elif results['mAP'] > 0.4:
-            f.write("Moderate detection performance (mAP > 0.4)\n")
+        dr = results['frame_detection_rate']
+        if dr > 0.9:
+            f.write("Excellent tracking performance (>90% frames detected)\n")
+        elif dr > 0.75:
+            f.write("Good tracking performance (>75% frames detected)\n")
+        elif dr > 0.5:
+            f.write("Moderate tracking performance (>50% frames detected)\n")
         else:
-            f.write("Poor detection performance (mAP < 0.4)\n")
+            f.write("Poor tracking performance (<50% frames detected)\n")
+        
+        if results['avg_position_error'] < 5:
+            f.write("Excellent position accuracy (<5px error)\n")
+        elif results['avg_position_error'] < 10:
+            f.write("Good position accuracy (<10px error)\n")
+        else:
+            f.write("Moderate position accuracy (>10px error)\n")
         
         f.write("\n" + "="*80 + "\n")
     
-    print(f"Evaluation report saved: {report_path}")
+    print(f"Tracking report saved: {report_path}")
     return report_path

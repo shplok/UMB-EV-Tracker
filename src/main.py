@@ -37,7 +37,7 @@ from tracking import (
     visualize_tracking_results,
     analyze_tracking_quality
 )
-from detection_metrics import evaluate_detections
+from detection_metrics import evaluate_tracking_performance
 
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
@@ -240,6 +240,7 @@ def run_ev_detection_pipeline(tiff_file: str,
         # Stage 6: Tracking
         print("STAGE 6: PARTICLE TRACKING")
         print("-" * 30)
+
         stage_start = time.time()
         
         tracking_params = {
@@ -271,25 +272,33 @@ def run_ev_detection_pipeline(tiff_file: str,
             metrics_dir = os.path.join(output_dir, "07_metrics")
             
             try:
-                metrics_results = evaluate_detections(
+
+                print("\nDEBUG - Checking frame numbering:")
+                print("Detection frames (first 20):", sorted(all_particles.keys())[:20])
+                print("Detection frames (last 20):", sorted(all_particles.keys())[-20:])
+                print("Total detection frames:", len(all_particles))
+
+                metrics_results = evaluate_tracking_performance(
                     all_particles=all_particles,
+                    tracks=tracks,
                     ground_truth_csv=ground_truth_csv,
                     output_dir=metrics_dir,
-                    distance_threshold=10.0,
+                    distance_threshold=20.0,
                     visualize=True
                 )
                 
                 results['stage_times']['metrics'] = time.time() - stage_start
                 results['stage_results']['metrics'] = metrics_results
                 
-                print(f"\n  mAP: {metrics_results['mAP']:.4f}")
-                print(f"  AUC: {metrics_results['AUC']:.4f}")
-                print(f"  Best F1: {metrics_results['best_f1']:.4f} @ threshold {metrics_results['best_threshold']:.3f}")
+                print(f"\n  Frame Detection Rate: {metrics_results['frame_detection_rate']*100:.1f}%")
+                print(f"  Avg Position Error: {metrics_results['avg_position_error']:.2f}px")
+                if metrics_results['matched_track_id']:
+                    print(f"  Track F1 Score: {metrics_results['track_metrics']['track_f1']:.3f}")
                 
             except Exception as e:
                 print(f"  Warning: Metrics evaluation failed: {str(e)}")
                 results['stage_results']['metrics'] = {'error': str(e)}
-        
+
         # Stage 8: Final Documentation
         print("\nSTAGE 8: FINAL DOCUMENTATION")
         print("-" * 30)
