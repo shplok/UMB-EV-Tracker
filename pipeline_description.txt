@@ -16,12 +16,18 @@ Temporal background models are created for each frame using the median of surrou
 Background-subtracted frames undergo enhancement to improve particle visibility. Absolute values are taken to capture both positive and negative intensity changes, followed by normalization to 0-255 range. CLAHE (Contrast Limited Adaptive Histogram Equalization) enhances local contrast, and Gaussian blur reduces noise while preserving particle features.
 
 ## Stage 5: Particle Detection
-Template matching applies the EV filter to enhanced frames using normalized cross-correlation. Local maxima above the threshold (default 0.35) are identified using non-maximum suppression with minimum separation distance (default 30px). Detection positions are adjusted to account for filter size, and correlation scores are recorded for each detection.
+Template matching applies the EV filter to enhanced frames using normalized cross-correlation. Local maxima above the threshold (default 0.5) are identified using non-maximum suppression with minimum separation distance (default 30px). Detection positions are adjusted to account for filter size, and correlation scores are recorded for each detection.
 
 ## Stage 6: Particle Tracking
 Detections are linked across frames using nearest-neighbor matching within maximum distance constraints (default 25px). Tracks are terminated if no matching detection is found within the frame gap limit (default 3 frames). Only tracks with minimum length (default 5 detections) are retained for analysis.
 
-## Stage 8: Visualization and Output
+## Stage 7: Visualization and Output
+Track overlays show particle paths on background images with color-coding by detection quality. Detailed analysis plots display velocity profiles, detection scores, and motion characteristics for top-quality tracks. A detection video (MP4) shows particle detections across all frames with real-time overlays and frame-by-frame statistics.
+
+## Stage 8: Metrics Evaluation (Optional - when ground truth available)
+When ground truth annotations are available, detection performance is quantitatively assessed using standard computer vision metrics. Detections are matched to ground truth particles within a distance threshold (default 10px). The precision-recall curve is computed by varying the detection confidence threshold, and the Area Under Curve (AUC) quantifies overall performance. Mean Average Precision (mAP) is calculated using 11-point interpolation to provide a single-number summary of detection quality. The evaluation identifies the optimal operating point (detection threshold) that maximizes the F1 score, balancing precision and recall. Performance visualizations include the precision-recall curve with AUC shading and metrics-versus-threshold plots showing precision, recall, and F1 score trends.
+
+## Stage 9: Final Documentation
 Track overlays show particle paths on background images with color-coding by detection quality. Detailed analysis plots display velocity profiles, detection scores, and motion characteristics for top-quality tracks. A detection video (MP4) shows particle detections across all frames with real-time overlays and frame-by-frame statistics.
 
 ## Output Files
@@ -33,11 +39,22 @@ Track overlays show particle paths on background images with color-coding by det
 - Detection video (MP4 showing all frames with overlays)
 - Track overview (all particle paths on single image)
 - Detailed track analysis (velocity and score profiles)
+- Metrics evaluation report (mAP, AUC, precision-recall curves)
+- Metrics visualizations (PR curves, threshold analysis)
 - Pipeline parameters (configuration settings used)
 
 ## Key Parameters
 - Filter: radius=10px, size=41px, sigma=2.0
 - Background: window_size=15 frames
 - Enhancement: blur_kernel=7px, CLAHE_limit=2.0
-- Detection: threshold=0.35, min_distance=30px
+- Detection: threshold=0.5, min_distance=30px
 - Tracking: max_distance=25px, min_length=5 frames, max_gap=3 frames
+- Metrics: distance_threshold=10px for GT matching
+
+## Performance Metrics (when ground truth available)
+- mAP (mean Average Precision): Overall detection quality score
+- AUC (Area Under PR Curve): Performance across all thresholds
+- Precision: Ratio of true positives to all detections
+- Recall: Ratio of detected particles to all ground truth particles
+- F1 Score: Harmonic mean of precision and recall
+- Optimal threshold: Detection confidence value maximizing F1 score
