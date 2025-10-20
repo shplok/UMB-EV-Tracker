@@ -38,7 +38,7 @@ from tracking import (
     analyze_tracking_quality
 )
 from detection_metrics import evaluate_tracking_performance
-
+from compute_pr_roc import evaluate_with_pr_roc
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     """Create a timestamped output directory for results"""
@@ -286,14 +286,25 @@ def run_ev_detection_pipeline(tiff_file: str,
                     distance_threshold=30.0,
                     visualize=True
                 )
+                pr_roc_results = evaluate_with_pr_roc(
+                    all_particles=all_particles,
+                    ground_truth_csv=ground_truth_csv,
+                    output_dir=metrics_dir,
+                    distance_threshold=30.0
+                )
                 
                 results['stage_times']['metrics'] = time.time() - stage_start
                 results['stage_results']['metrics'] = metrics_results
+                results['stage_results']['pr_roc'] = pr_roc_results
                 
                 print(f"\n  Frame Detection Rate: {metrics_results['frame_detection_rate']*100:.1f}%")
                 print(f"  Avg Position Error: {metrics_results['avg_position_error']:.2f}px")
                 if metrics_results['matched_track_id']:
                     print(f"  Track F1 Score: {metrics_results['track_metrics']['track_f1']:.3f}")
+
+                if pr_roc_results:
+                    print(f"\n  Average Precision (AP): {pr_roc_results['pr_roc_data']['avg_precision']:.3f}")
+                    print(f"  ROC AUC: {pr_roc_results['pr_roc_data']['roc_auc']:.3f}")
                 
             except Exception as e:
                 print(f"  Warning: Metrics evaluation failed: {str(e)}")
@@ -361,7 +372,7 @@ if __name__ == "__main__":
     
     # CONFIGURATION - Modify these paths and parameters as needed
     # ============================================================
-    
+
     # Input file path - update with TIFF file location
     TIFF_FILE = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif"
     
