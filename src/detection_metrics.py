@@ -73,43 +73,56 @@ def calculate_frame_detection_rate(all_particles: Dict[int, Dict[str, List]],
     
     detected_frames = []
     missed_frames = []
+    false_positive_frames = []
     detection_distances = []
     detection_scores = []
     
-    for i, frame in enumerate(gt_frames):
-        gt_pos = gt_positions[i]
-        
-        if frame not in all_particles or not all_particles[frame]['positions']:
-            missed_frames.append(frame)
+    # First handle all detection frames
+    for frame, particles in all_particles.items():
+        if not particles['positions']:
             continue
-        
-        frame_detections = all_particles[frame]['positions']
-        frame_scores = all_particles[frame]['scores']
-        
-        # Find closest detection
-        det_array = np.array(frame_detections)
-        distances = np.sqrt(np.sum((det_array - gt_pos)**2, axis=1))
-        min_dist_idx = np.argmin(distances)
-        min_dist = distances[min_dist_idx]
-        
-        if min_dist <= distance_threshold:
-            detected_frames.append(frame)
-            detection_distances.append(min_dist)
-            detection_scores.append(frame_scores[min_dist_idx])
+            
+        if frame in gt_frames:
+            # Frame has ground truth - check if detection matches
+            gt_idx = np.where(gt_track['frames'] == frame)[0][0]
+            gt_pos = gt_positions[gt_idx]
+            
+            # Find closest detection
+            det_array = np.array(particles['positions'])
+            distances = np.sqrt(np.sum((det_array - gt_pos)**2, axis=1))
+            min_dist_idx = np.argmin(distances)
+            min_dist = distances[min_dist_idx]
+            
+            if min_dist <= distance_threshold:
+                detected_frames.append(frame)
+                detection_distances.append(min_dist)
+                detection_scores.append(particles['scores'][min_dist_idx])
+            else:
+                missed_frames.append(frame)
         else:
+            # No ground truth for this frame - false positive
+            false_positive_frames.append(frame)
+    
+    # Add remaining missed frames
+    for frame in gt_frames:
+        if frame not in detected_frames and frame not in missed_frames:
             missed_frames.append(frame)
     
     num_detected = len(detected_frames)
     total_frames = len(gt_frames)
     detection_rate = num_detected / total_frames if total_frames > 0 else 0
+    false_positive_rate = len(false_positive_frames) / len(all_particles) if all_particles else 0
     
     return {
         'detection_rate': detection_rate,
+        'false_positive_rate': false_positive_rate,
         'frames_detected': num_detected,
         'frames_missed': len(missed_frames),
+        'false_positives': len(false_positive_frames),
         'total_frames': total_frames,
         'detected_frame_list': detected_frames,
         'missed_frame_list': missed_frames,
+        'false_positive_frame_list': false_positive_frames,
         'avg_detection_distance': np.mean(detection_distances) if detection_distances else 0,
         'std_detection_distance': np.std(detection_distances) if detection_distances else 0,
         'avg_detection_score': np.mean(detection_scores) if detection_scores else 0,
@@ -209,6 +222,8 @@ def evaluate_tracking_performance(all_particles: Dict[int, Dict[str, List]],
     print("="*80)
     print(f"\nFrame Detection Rate:  {frame_metrics['detection_rate']*100:.1f}% "
           f"({frame_metrics['frames_detected']}/{frame_metrics['total_frames']} frames)")
+    print(f"False Positive Rate:   {frame_metrics['false_positive_rate']*100:.1f}% "
+          f"({frame_metrics['false_positives']} false detections)")
     print(f"Position Accuracy:     {frame_metrics['avg_detection_distance']:.2f} ± "
           f"{frame_metrics['std_detection_distance']:.2f} px")
     
@@ -243,16 +258,33 @@ def visualize_tracking_performance(results: Dict[str, Any],
     gt_track = results['ground_truth']
     frame_metrics = results['frame_metrics']
     
-    # Plot 1: Frame detection status
+    # Plot 1: Frame detection status with false positives
     ax1 = axes[0, 0]
-    all_frames = gt_track['frames']
-    detected = [1 if f in frame_metrics['detected_frame_list'] else 0 for f in all_frames]
-    colors = ['green' if d else 'red' for d in detected]
-    ax1.scatter(all_frames, detected, c=colors, s=50, alpha=0.7)
+    
+    # Plot ground truth frames
+    all_frames = sorted(list(set(gt_track['frames']).union(frame_metrics['false_positive_frame_list'])))
+    detection_status = []
+    colors = []
+    
+    for frame in all_frames:
+        if frame in frame_metrics['detected_frame_list']:
+            detection_status.append(1)
+            colors.append('green')  # True positive
+        elif frame in frame_metrics['false_positive_frame_list']:
+            detection_status.append(0.5)  # Place false positives at y=0.5
+            colors.append('yellow')  # False positive
+        else:
+            detection_status.append(0)
+            colors.append('red')  # Missed detection
+    
+    ax1.scatter(all_frames, detection_status, c=colors, s=50, alpha=0.7)
     ax1.set_xlabel('Frame Number')
-    ax1.set_ylabel('Detected (1) / Missed (0)')
-    ax1.set_title(f'Detection Status: {results["frame_detection_rate"]*100:.1f}% detected')
+    ax1.set_ylabel('Detection Status')
+    ax1.set_title(f'Detection Status: {results["frame_detection_rate"]*100:.1f}% detected\n'
+                  f'False Positive Rate: {frame_metrics["false_positive_rate"]*100:.1f}%')
     ax1.set_ylim([-0.2, 1.2])
+    ax1.set_yticks([0, 0.5, 1])
+    ax1.set_yticklabels(['Missed', 'False\nPositive', 'Detected'])
     ax1.grid(True, alpha=0.3)
     
     # Plot 2: Position errors
@@ -321,9 +353,12 @@ def save_tracking_report(results: Dict[str, Any], output_dir: str) -> str:
         f.write("-"*80 + "\n")
         f.write(f"Detection Rate:        {results['frame_detection_rate']*100:.1f}%\n")
         f.write(f"Frames Detected:       {results['frames_detected']}/{results['total_gt_frames']}\n")
+        f.write(f"False Positive Rate:   {results['frame_metrics']['false_positive_rate']*100:.1f}%\n")
+        f.write(f"False Positives:       {results['frame_metrics']['false_positives']} frames\n")
         f.write(f"Avg Position Error:    {results['avg_position_error']:.2f} ± "
                 f"{results['std_position_error']:.2f} px\n")
         f.write(f"Distance Threshold:    {results['distance_threshold']:.1f} px\n\n")
+    
         
         if results['matched_track_id']:
             tm = results['track_metrics']
