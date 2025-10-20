@@ -38,7 +38,6 @@ from tracking import (
     analyze_tracking_quality
 )
 from detection_metrics import evaluate_tracking_performance
-from compute_pr_roc import evaluate_with_pr_roc
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     """Create a timestamped output directory for results"""
@@ -286,26 +285,15 @@ def run_ev_detection_pipeline(tiff_file: str,
                     distance_threshold=30.0,
                     visualize=True
                 )
-                pr_roc_results = evaluate_with_pr_roc(
-                    all_particles=all_particles,
-                    ground_truth_csv=ground_truth_csv,
-                    output_dir=metrics_dir,
-                    distance_threshold=30.0
-                )
                 
                 results['stage_times']['metrics'] = time.time() - stage_start
                 results['stage_results']['metrics'] = metrics_results
-                results['stage_results']['pr_roc'] = pr_roc_results
                 
                 print(f"\n  Frame Detection Rate: {metrics_results['frame_detection_rate']*100:.1f}%")
                 print(f"  Avg Position Error: {metrics_results['avg_position_error']:.2f}px")
                 if metrics_results['matched_track_id']:
                     print(f"  Track F1 Score: {metrics_results['track_metrics']['track_f1']:.3f}")
 
-                if pr_roc_results:
-                    print(f"\n  Average Precision (AP): {pr_roc_results['pr_roc_data']['avg_precision']:.3f}")
-                    print(f"  ROC AUC: {pr_roc_results['pr_roc_data']['roc_auc']:.3f}")
-                
             except Exception as e:
                 print(f"  Warning: Metrics evaluation failed: {str(e)}")
                 results['stage_results']['metrics'] = {'error': str(e)}
@@ -367,81 +355,127 @@ def run_ev_detection_pipeline(tiff_file: str,
 
 if __name__ == "__main__":
     """
-    Main execution block - modify the parameters below to run the pipeline
+    Batch Evaluation - Process all TIFF/CSV pairs in data directories
     """
+    from compute_pr_roc import evaluate_multiple_tracks
+    from datetime import datetime
     
-    # CONFIGURATION - Modify these paths and parameters as needed
-    # ============================================================
-
-    # Input file path - update with TIFF file location
-    TIFF_FILE = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif"
+    print("="*80)
+    print("EV DETECTION PIPELINE - BATCH EVALUATION")
+    print("="*80)
+    print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
-    # Ground truth CSV (optional - set to None if not available)
-    GROUND_TRUTH_CSV = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv"
+    # =========================================================================
+    # CONFIGURATION
+    # =========================================================================
     
-    # Output directory - will be auto-generated with timestamp if None
-    OUTPUT_DIR = None
+    TIFF_DIR = r"UMB-EV-Tracker\data\tiff"
+    CSV_DIR = r"UMB-EV-Tracker\data\csv"
+    OUTPUT_DIR = r"UMB-EV-Tracker\out\multi_track_evaluation"
     
-    # Pipeline parameters - adjust based on data characteristics
+    # Pipeline parameters
     PARAMETERS = {
-        # Filter parameters (for ~20px EVs)
-        'filter_radius': 10,          # Bright center radius
-        'filter_size': 41,            # Filter matrix size
-        'filter_sigma': 2.0,          # Gaussian smoothing
-        
-        # Background subtraction
-        'bg_window_size': 15,         # Temporal median window
-        
-        # Enhancement  
-        'blur_kernel_size': 7,        # Noise reduction kernel
-        'clahe_clip_limit': 2.0,      # Contrast enhancement
-        'clahe_grid_size': (8, 8),    # CLAHE tile size
-        
-        # Detection
-        'detection_threshold': 0.58,  # Correlation threshold
-        'min_distance': 30,           # Min separation between detections
-        
-        # Tracking
-        'max_distance': 25,           # Max movement between frames
-        'min_track_length': 5,        # Min detections per track
-        'max_frame_gap': 3,           # Max missing frames in track
-        
-        # Visualization
-        'num_sample_frames': 6,       # Sample frames for plots
-        'num_top_tracks': 5           # Detailed tracks to analyze
+        'filter_radius': 10,
+        'filter_size': 41,
+        'filter_sigma': 2.0,
+        'bg_window_size': 15,
+        'blur_kernel_size': 7,
+        'clahe_clip_limit': 2.0,
+        'clahe_grid_size': (8, 8),
+        'detection_threshold': 0.58,
+        'min_distance': 30,
+        'max_distance': 25,
+        'min_track_length': 5,
+        'max_frame_gap': 3,
+        'num_sample_frames': 6,
+        'num_top_tracks': 5
     }
     
-    # Run the pipeline
-    # ================
+    DISTANCE_THRESHOLD = 30.0
     
-    print("Starting EV Detection Pipeline...")
-    print(f"Input file: {TIFF_FILE}")
-    if GROUND_TRUTH_CSV:
-        print(f"Ground truth: {GROUND_TRUTH_CSV}")
+    # =========================================================================
+    # VALIDATION
+    # =========================================================================
     
-    # Check if input file exists
-    if not os.path.exists(TIFF_FILE):
-        print(f"Error: Input file not found: {TIFF_FILE}")
+    if not os.path.exists(TIFF_DIR):
+        print(f"ERROR: TIFF directory not found: {TIFF_DIR}")
         sys.exit(1)
     
-    # Check if ground truth exists (if specified)
-    if GROUND_TRUTH_CSV and not os.path.exists(GROUND_TRUTH_CSV):
-        print(f"Warning: Ground truth file not found: {GROUND_TRUTH_CSV}")
-        print("Continuing without metrics evaluation...")
-        GROUND_TRUTH_CSV = None
+    if not os.path.exists(CSV_DIR):
+        print(f"ERROR: CSV directory not found: {CSV_DIR}")
+        sys.exit(1)
     
-    # Execute pipeline
-    results = run_ev_detection_pipeline(
-        tiff_file=TIFF_FILE,
-        output_dir=OUTPUT_DIR,
-        parameters=PARAMETERS,
-        ground_truth_csv=GROUND_TRUTH_CSV
-    )
+    from pathlib import Path
+    tiff_files = list(Path(TIFF_DIR).glob("*.tif")) + list(Path(TIFF_DIR).glob("*.tiff"))
+    csv_files = list(Path(CSV_DIR).glob("*.csv"))
     
-    # Final status
-    if results['success']:
-        print(f"\n Pipeline completed successfully")
-        print(f"  Results directory: {results['output_dir']}")
-    else:
-        print(f"\n Pipeline failed: {results.get('error', 'Unknown error')}")
-        print(f"  Partial results in: {results['output_dir']}")
+    print(f"Found {len(tiff_files)} TIFF file(s)")
+    print(f"Found {len(csv_files)} CSV file(s)")
+    
+    if len(tiff_files) == 0 or len(csv_files) == 0:
+        print("ERROR: No TIFF or CSV files found for evaluation.")
+        sys.exit(1)
+    
+    # =========================================================================
+    # RUN EVALUATION
+    # =========================================================================
+    
+    print(f"\nOutput will be saved to: {OUTPUT_DIR}")
+    print("\n" + "="*80)
+    print("STARTING BATCH EVALUATION")
+    print("="*80 + "\n")
+    
+    try:
+        results = evaluate_multiple_tracks(
+            tiff_dir=TIFF_DIR,
+            csv_dir=CSV_DIR,
+            output_dir=OUTPUT_DIR,
+            pipeline_function=run_ev_detection_pipeline,
+            distance_threshold=DISTANCE_THRESHOLD,
+            parameters=PARAMETERS
+        )
+        
+        # =========================================================================
+        # SUMMARY
+        # =========================================================================
+        
+        print("\n" + "="*80)
+        print("BATCH EVALUATION COMPLETE")
+        print("="*80)
+        
+        if results['track_metrics']:
+            import numpy as np
+            
+            num_tracks = len(results['track_metrics'])
+            detection_rates = [m['detection_rate'] for m in results['track_metrics']]
+            avg_scores = [m['avg_score'] for m in results['track_metrics']]
+            avg_errors = [m['avg_error'] for m in results['track_metrics'] 
+                         if m['avg_error'] != np.inf]
+            
+            print(f"\nResults Summary:")
+            print(f"  Tracks Evaluated:        {num_tracks}")
+            print(f"  Mean Detection Rate:     {np.mean(detection_rates):.3f} ± {np.std(detection_rates):.3f}")
+            print(f"  Mean Detection Score:    {np.mean(avg_scores):.3f} ± {np.std(avg_scores):.3f}")
+            if avg_errors:
+                print(f"  Mean Position Error:     {np.mean(avg_errors):.2f} ± {np.std(avg_errors):.2f} px")
+            
+            print(f"\nResults saved to: {results['output_dir']}")
+            print(f"  - Individual track plots: *_track_performance.png")
+            print(f"  - Aggregate summary:      aggregate_summary.png")
+            print(f"  - Metrics CSV:            summary_metrics.csv")
+        else:
+            print("\nNo tracks were successfully evaluated.")
+        
+        print(f"\nCompleted at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+    except Exception as e:
+        print(f"\n" + "="*80)
+        print("BATCH EVALUATION FAILED")
+        print("="*80)
+        print(f"Error: {str(e)}")
+        
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
+        
+        sys.exit(1)
