@@ -108,17 +108,36 @@ def calculate_frame_detection_rate(all_particles: Dict[int, Dict[str, List]],
         if frame not in detected_frames and frame not in missed_frames:
             missed_frames.append(frame)
     
-    num_detected = len(detected_frames)
-    total_frames = len(gt_frames)
-    detection_rate = num_detected / total_frames if total_frames > 0 else 0
-    false_positive_rate = len(false_positive_frames) / len(all_particles) if all_particles else 0
+    total_frames = len(all_particles)
+    gt_frame_set = set(gt_frames)
+    all_frame_set = set(all_particles.keys())
+
+    # Correct detections (true positives)
+    TP = len(detected_frames)
+
+    # Missed detections (false negatives)
+    FN = len(missed_frames)
+
+    # False positives
+    FP = len(false_positive_frames)
+
+    # True negatives: frames with no GT and no detections
+    TN = len([
+        f for f in all_frame_set
+        if f not in gt_frame_set and not all_particles[f]['positions']
+    ])
+
+    accuracy = (TP + TN) / total_frames if total_frames > 0 else 0
+
     
     return {
-        'detection_rate': detection_rate,
-        'false_positive_rate': false_positive_rate,
-        'frames_detected': num_detected,
+        'overall_frame_accuracy': accuracy,
+        'true_positives': TP,
+        'false_negatives': FN,
+        'true_negatives': TN,
+        'false_positives': FP,
+        'frames_detected': TP,  # ADD THIS LINE
         'frames_missed': len(missed_frames),
-        'false_positives': len(false_positive_frames),
         'total_frames': total_frames,
         'detected_frame_list': detected_frames,
         'missed_frame_list': missed_frames,
@@ -127,9 +146,10 @@ def calculate_frame_detection_rate(all_particles: Dict[int, Dict[str, List]],
         'std_detection_distance': np.std(detection_distances) if detection_distances else 0,
         'avg_detection_score': np.mean(detection_scores) if detection_scores else 0,
         'detection_distances': detection_distances,
-        'detection_scores': detection_scores
+        'detection_scores': detection_scores,
+        'detection_rate': len(detected_frames) / len(gt_frames) if len(gt_frames) > 0 else 0,
+        'false_positive_rate': len(false_positive_frames) / total_frames if total_frames > 0 else 0,
     }
-
 
 def calculate_track_metrics(matched_track: Dict[str, Any],
                             gt_track: Dict[str, Any]) -> Dict[str, Any]:
@@ -172,13 +192,13 @@ def calculate_track_metrics(matched_track: Dict[str, Any],
         'avg_velocity': matched_track.get('avg_velocity', 0)
     }
 
-
 def evaluate_tracking_performance(all_particles: Dict[int, Dict[str, List]],
                                   tracks: Dict[int, Dict[str, Any]],
                                   ground_truth_csv: str,
                                   output_dir: str,
                                   distance_threshold: float = 20.0,
-                                  visualize: bool = True) -> Dict[str, Any]:
+                                  visualize: bool = True,
+                                  image_stack: np.ndarray = None) -> Dict[str, Any]:
     """Main evaluation function for tracking a single particle"""
     
     # Load ground truth
@@ -226,6 +246,9 @@ def evaluate_tracking_performance(all_particles: Dict[int, Dict[str, List]],
           f"({frame_metrics['false_positives']} false detections)")
     print(f"Position Accuracy:     {frame_metrics['avg_detection_distance']:.2f} ± "
           f"{frame_metrics['std_detection_distance']:.2f} px")
+    print(f"Overall Frame Accuracy: {frame_metrics['overall_frame_accuracy']*100:.1f}% "
+      f"({frame_metrics['true_positives']} TP, {frame_metrics['true_negatives']} TN)")
+
     
     if matched_track_id:
         print(f"\nTrack Quality (ID #{matched_track_id}):")
@@ -239,8 +262,30 @@ def evaluate_tracking_performance(all_particles: Dict[int, Dict[str, List]],
     
     # Create visualizations and report
     if visualize:
+        # Original visualization
         viz_paths = visualize_tracking_performance(results, all_particles, tracks, output_dir)
         results['visualization_paths'] = viz_paths
+        
+        # NEW: Create comprehensive track report if image_stack is provided
+        if image_stack is not None:
+            try:
+                from improved_visualizations import create_comprehensive_track_report
+                
+                comprehensive_path = create_comprehensive_track_report(
+                    image_stack=image_stack,
+                    tracks=tracks,
+                    all_particles=all_particles,
+                    gt_track=gt_track,
+                    frame_metrics=frame_metrics,
+                    output_dir=output_dir,
+                    top_n_tracks=5
+                )
+                
+                results['comprehensive_report_path'] = comprehensive_path
+                print(f"\n✓ Comprehensive track report created: {comprehensive_path}")
+                
+            except Exception as e:
+                print(f"\n⚠ Warning: Could not create comprehensive report: {str(e)}")
         
         report_path = save_tracking_report(results, output_dir)
         results['report_path'] = report_path

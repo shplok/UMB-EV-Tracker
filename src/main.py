@@ -284,7 +284,8 @@ def run_ev_detection_pipeline(tiff_file: str,
                     ground_truth_csv=ground_truth_csv,
                     output_dir=metrics_dir,
                     distance_threshold=30.0,
-                    visualize=True
+                    visualize=True,
+                    image_stack=image_stack
                 )
                 pr_roc_results = evaluate_with_pr_roc(
                     all_particles=all_particles,
