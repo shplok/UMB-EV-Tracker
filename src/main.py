@@ -368,7 +368,6 @@ def run_ev_detection_pipeline(tiff_file: str,
 
 if __name__ == "__main__":
     
-    
     # TIFF LIST
     # UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif -- Done 
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z35um_mov_1_MMStack_Pos0.ome.tif -- Done
@@ -378,8 +377,6 @@ if __name__ == "__main__":
     # UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv -- Done
-    
-
 
     TIFF_FILE = r"UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif"
     
