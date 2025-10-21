@@ -298,7 +298,7 @@ def evaluate_with_pr_roc(all_particles: Dict[int, Dict[str, List]],
         output_dir: Directory to save outputs
         distance_threshold: Distance threshold for matching (pixels)
     """
-    from detection_metrics import load_ground_truth_track
+    from metrics.detection_metrics import load_ground_truth_track
     
     print("\nCalculating PR and ROC curves...")
     
