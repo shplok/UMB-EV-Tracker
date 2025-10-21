@@ -269,7 +269,7 @@ def evaluate_tracking_performance(all_particles: Dict[int, Dict[str, List]],
         # NEW: Create comprehensive track report if image_stack is provided
         if image_stack is not None:
             try:
-                from improved_visualizations import create_comprehensive_track_report
+                from metrics.improved_visualizations import create_comprehensive_track_report
                 
                 comprehensive_path = create_comprehensive_track_report(
                     image_stack=image_stack,
