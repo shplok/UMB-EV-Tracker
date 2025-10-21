@@ -44,8 +44,8 @@ def create_comprehensive_track_report(image_stack: np.ndarray,
     gs = gridspec.GridSpec(3, 3, figure=fig, hspace=0.3, wspace=0.3)
     
     # === TOP ROW: Track overlay image (spans 2 columns) + Summary metrics ===
-    ax_overlay = fig.add_subplot(gs[0, 1])
-    ax_summary = fig.add_subplot(gs[0, 1:])
+    ax_overlay = fig.add_subplot(gs[0, :2])
+    ax_summary = fig.add_subplot(gs[0, 2])
     
     # Create track overlay on mid-frame
     mid_frame = len(image_stack) // 2
