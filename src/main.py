@@ -7,38 +7,38 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import all pipeline modules
-from image_loader import (
+from pipeline.image_loader import (
     load_tiff_stack, 
     validate_image_stack, 
     get_stack_info
 )
-from filter_creation import (
+from pipeline.filter_creation import (
     create_large_ev_filter,
     visualize_filter,
     save_filter_data
 )
-from background_subtraction import (
+from pipeline.background_subtraction import (
     create_temporal_background,
     subtract_background_from_stack,
     visualize_background_subtraction
 )
-from enhancement import (
+from pipeline.enhancement import (
     enhance_movement_frames,
     visualize_enhancement
 )
-from detection import (
+from pipeline.detection import (
     detect_particles_in_all_frames,
     visualize_detection_results,
     analyze_detection_quality
 )
-from tracking import (
+from pipeline.tracking import (
     track_particles_across_frames,
     calculate_track_properties,
     visualize_tracking_results,
     analyze_tracking_quality
 )
-from detection_metrics import evaluate_tracking_performance
-from compute_pr_roc import evaluate_with_pr_roc
+from metrics.detection_metrics import evaluate_tracking_performance
+from metrics.compute_pr_roc import evaluate_with_pr_roc
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     """Create a timestamped output directory for results"""
