@@ -13,7 +13,7 @@ def compute_ap_from_csv(file_path):
     ap = np.trapz(df["precision"], df["recall"])
     return ap
 
-csv_files = glob.glob("results/multi_run/*/detection_metrics.csv")
+csv_files = glob.glob(r"UMB-EV-Tracker\out\*\07_metrics\threshold_analysis.csv")
 aps = [compute_ap_from_csv(f) for f in csv_files]
 map_score = np.mean(aps)
 
