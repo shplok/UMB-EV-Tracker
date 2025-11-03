@@ -10,57 +10,49 @@ def calculate_detection_labels_and_scores(all_particles: Dict[int, Dict[str, Lis
                                           distance_threshold: float = 20.0) -> Tuple[np.ndarray, np.ndarray]:
     """
     Create binary labels and scores for all detections across all frames.
-    Uses greedy matching to ensure one-to-one correspondence between detections and ground truth.
-
+    
     Returns:
         labels: Binary array (1 = true positive, 0 = false positive)
         scores: Detection confidence scores
     """
     labels = []
     scores = []
-
+    
     gt_frames = set(gt_track['frames'])
     gt_positions = np.array(gt_track['positions'])
     gt_frame_to_idx = {frame: idx for idx, frame in enumerate(gt_track['frames'])}
-
+    
     for frame, particles in all_particles.items():
         if not particles['positions']:
             continue
-
+        
         det_positions = np.array(particles['positions'])
         det_scores = np.array(particles['scores'])
-
+        
         if frame in gt_frames:
             # Frame has ground truth - calculate distances
             gt_pos = gt_positions[gt_frame_to_idx[frame]]
             distances = np.sqrt(np.sum((det_positions - gt_pos)**2, axis=1))
-
-            # Find the closest detection within threshold (greedy matching)
-            # Only one detection can match each ground truth particle
-            min_dist_idx = np.argmin(distances)
-            min_dist = distances[min_dist_idx]
-
+            
             # Label each detection
-            for idx, score in enumerate(det_scores):
-                # Only the closest detection within threshold gets label=1
-                if idx == min_dist_idx and min_dist <= distance_threshold:
-                    labels.append(1)
-                else:
-                    labels.append(0)
+            for dist, score in zip(distances, det_scores):
+                labels.append(1 if dist <= distance_threshold else 0)
                 scores.append(score)
         else:
             # No ground truth - all detections are false positives
             for score in det_scores:
                 labels.append(0)
                 scores.append(score)
-
+    
     return np.array(labels), np.array(scores)
 
 
 def calculate_pr_roc_curves(all_particles: Dict[int, Dict[str, List]],
                             gt_track: Dict[str, Any],
                             distance_threshold: float = 20.0) -> Dict[str, Any]:
-
+    """
+    Calculate Precision-Recall and ROC curves for detection performance.
+    """
     # Get labels and scores
     labels, scores = calculate_detection_labels_and_scores(all_particles, gt_track, distance_threshold)
     
@@ -109,7 +101,9 @@ def calculate_pr_roc_curves(all_particles: Dict[int, Dict[str, List]],
 
 
 def plot_pr_roc_curves(pr_roc_data: Dict[str, Any], output_dir: str) -> str:
-
+    """
+    Create visualization of PR and ROC curves.
+    """
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     
     # PR Curve
@@ -166,7 +160,9 @@ def evaluate_at_multiple_thresholds(all_particles: Dict[int, Dict[str, List]],
                                     gt_track: Dict[str, Any],
                                     distance_threshold: float = 20.0,
                                     score_thresholds: List[float] = None) -> pd.DataFrame:
-    
+    """
+    Evaluate detection performance at multiple confidence score thresholds.
+    """
     if score_thresholds is None:
         score_thresholds = np.linspace(0, 1, 21)  # 0.0, 0.05, 0.10, ..., 1.0
     
@@ -197,16 +193,14 @@ def evaluate_at_multiple_thresholds(all_particles: Dict[int, Dict[str, List]],
         if len(labels) > 0:
             tp = np.sum(labels)
             fp = len(labels) - tp
-            # FN: ground truth frames that were not matched (total GT - matched GT)
             fn = len(gt_track['frames']) - tp
-
+            
             precision = tp / (tp + fp) if (tp + fp) > 0 else 0
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0
             f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
         else:
-            # No detections passed the threshold
             tp = fp = 0
-            fn = len(gt_track['frames'])  # All ground truth frames are missed
+            fn = len(gt_track['frames'])
             precision = recall = f1 = 0
         
         results.append({
@@ -224,7 +218,9 @@ def evaluate_at_multiple_thresholds(all_particles: Dict[int, Dict[str, List]],
 
 
 def plot_threshold_analysis(threshold_df: pd.DataFrame, output_dir: str) -> str:
-
+    """
+    Visualize performance metrics across different thresholds.
+    """
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     # Plot 1: Precision, Recall, F1 vs Threshold
@@ -293,7 +289,15 @@ def evaluate_with_pr_roc(all_particles: Dict[int, Dict[str, List]],
                         ground_truth_csv: str,
                         output_dir: str,
                         distance_threshold: float = 20.0) -> Dict[str, Any]:
-
+    """
+    Complete PR/ROC analysis wrapper.
+    
+    Args:
+        all_particles: Detection results from all frames
+        ground_truth_csv: Path to ground truth CSV file
+        output_dir: Directory to save outputs
+        distance_threshold: Distance threshold for matching (pixels)
+    """
     from metrics.detection_metrics import load_ground_truth_track
     
     print("\nCalculating PR and ROC curves...")

@@ -22,7 +22,7 @@ from typing import Dict, List, Tuple, Any
 
 def detect_particles_in_all_frames(enhanced_frames: np.ndarray, 
                                  ev_filter: np.ndarray,
-                                 threshold: float = 0.58, # confidence threshold for detection (tweakable)
+                                 threshold: float = 0.7, # confidence threshold for detection (tweakable)
                                  min_distance: int = 30) -> Dict[int, Dict[str, List]]:
  
     print("Detecting particles in all frames...")

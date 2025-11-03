@@ -39,9 +39,9 @@ from pipeline.tracking import (
 )
 from metrics.detection_metrics import evaluate_tracking_performance
 from metrics.compute_pr_roc import evaluate_with_pr_roc
-from pipeline.export_results import export_all_results
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
+    """Create a timestamped output directory for results"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Place all outputs under an `out/` root directory for easier discovery
     root = "out"
@@ -74,7 +74,25 @@ def run_ev_detection_pipeline(tiff_file: str,
     
     start_time = time.time()
     
-
+    # Set default parameters
+    if parameters is None:
+        parameters = {
+            'input_file': tiff_file,
+            'filter_radius': 10,
+            'filter_size': 41,
+            'filter_sigma': 2.0,
+            'bg_window_size': 15,
+            'blur_kernel_size': 7,
+            'clahe_clip_limit': 2.0,
+            'clahe_grid_size': (8, 8),
+            'detection_threshold': 0.58,
+            'min_distance': 30,
+            'max_distance': 25,
+            'min_track_length': 5,
+            'max_frame_gap': 3,
+            'num_sample_frames': 6,
+            'num_top_tracks': 5
+        }
     
     # Create output directory if not provided
     if output_dir is None:
@@ -307,16 +325,6 @@ def run_ev_detection_pipeline(tiff_file: str,
             f.write("\n")
             for key, value in parameters.items():
                 f.write(f"{key}: {value}\n")
-
-        print("\nExporting results to CSV...")
-        export_paths = export_all_results(
-            all_particles=all_particles,
-            tracks=tracks,
-            tiff_filename=tiff_file,
-            output_dir=output_dir,
-            include_untracked=True
-        )
-        results['export_paths'] = export_paths
         
         results['stage_times']['documentation'] = time.time() - stage_start
         
@@ -365,21 +373,10 @@ if __name__ == "__main__":
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z35um_mov_1_MMStack_Pos0.ome.tif -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif -- Done
 
-    # UMB-EV-Tracker\data\xslot_HCC1954_PT03_xp4_1500uLhr_z35um_mov_adjSP_9_MMStack_Pos0.ome.tif -- Done
-    # UMB-EV-Tracker\data\xslot_BT747_01_1500uLhr_z35um_mov_flush_adj_8_MMStack_Pos0.ome.tif -- Done
-    # UMB-EV-Tracker\data\xslot_BT747_00_1500uLhr_z40um_mov_flush_adj_9_MMStack_Pos0.ome.tif -- Done
-    # UMB-EV-Tracker\data\xslot_HCC1954_02_1500uLhr_z40um_mov_2_MMStack_Pos0.ome.tif -- Done
-
     # CSV LIST
     # UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv -- Done
-
-    # UMB-EV-Tracker\data\xslot_HCC1954_PT03_xp4_SP9.csv -- Done
-    # UMB-EV-Tracker\data\xslot_BT747_01_1500uLhr_z35um_mov_flush_adj_8_MMStack_Pos0.ome.csv -- Done
-    # UMB-EV-Tracker\data\xslot_BT747_01_1500uLhr_z40um_mov_flush_adj_9_MMStack_Pos0.ome.csv -- Done
-    # UMB-EV-Tracker\data\Infocus_xslot_HCC1954_02_1500uLhr_z40um_mov_2.csv -- Done
-
 
     TIFF_FILE = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif"
     
@@ -406,12 +403,12 @@ if __name__ == "__main__":
         
         # Detection
         'detection_threshold': 0.58,  # Correlation threshold
-        'min_distance': 20,           # Min separation between detections
+        'min_distance': 30,           # Min separation between detections
         
         # Tracking
-        'max_distance': 40,           # Max movement between frames
-        'min_track_length': 3,        # Min detections per track
-        'max_frame_gap': 5,           # Max missing frames in track
+        'max_distance': 25,           # Max movement between frames
+        'min_track_length': 5,        # Min detections per track
+        'max_frame_gap': 3,           # Max missing frames in track
         
         # Visualization
         'num_sample_frames': 6,       # Sample frames for plots
@@ -434,6 +431,7 @@ if __name__ == "__main__":
     # Check if ground truth exists (if specified)
     if GROUND_TRUTH_CSV and not os.path.exists(GROUND_TRUTH_CSV):
         print(f"Warning: Ground truth file not found: {GROUND_TRUTH_CSV}")
+        print("Continuing without metrics evaluation...")
         GROUND_TRUTH_CSV = None
     
     # Execute pipeline
