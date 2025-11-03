@@ -39,6 +39,7 @@ from pipeline.tracking import (
 )
 from metrics.detection_metrics import evaluate_tracking_performance
 from metrics.compute_pr_roc import evaluate_with_pr_roc
+from pipeline.export_results import export_all_results
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     """Create a timestamped output directory for results"""
@@ -325,6 +326,16 @@ def run_ev_detection_pipeline(tiff_file: str,
             f.write("\n")
             for key, value in parameters.items():
                 f.write(f"{key}: {value}\n")
+
+        print("\nExporting results to CSV...")
+        export_paths = export_all_results(
+            all_particles=all_particles,
+            tracks=tracks,
+            tiff_filename=tiff_file,
+            output_dir=output_dir,
+            include_untracked=True
+        )
+        results['export_paths'] = export_paths
         
         results['stage_times']['documentation'] = time.time() - stage_start
         
