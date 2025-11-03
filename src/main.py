@@ -384,15 +384,26 @@ if __name__ == "__main__":
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z35um_mov_1_MMStack_Pos0.ome.tif -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif -- Done
 
+    # UMB-EV-Tracker\data\xslot_HCC1954_PT03_xp4_1500uLhr_z35um_mov_adjSP_9_MMStack_Pos0.ome.tif -- Done-ish
+    # UMB-EV-Tracker\data\xslot_BT747_01_1500uLhr_z35um_mov_flush_adj_8_MMStack_Pos0.ome.tif -- Done-ish
+    # UMB-EV-Tracker\data\xslot_BT747_00_1500uLhr_z40um_mov_flush_adj_9_MMStack_Pos0.ome.tif
+    # UMB-EV-Tracker\data\xslot_HCC1954_02_1500uLhr_z40um_mov_2_MMStack_Pos0.ome.tif 
+
     # CSV LIST
     # UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv -- Done
     # UMB-EV-Tracker\data\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv -- Done
 
-    TIFF_FILE = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif"
+    # UMB-EV-Tracker\data\xslot_HCC1954_PT03_xp4_SP9.csv -- Done-ish
+    # UMB-EV-Tracker\data\xslot_BT747_01_1500uLhr_z35um_mov_flush_adj_8_MMStack_Pos0.ome.csv -- Done-ish
+    # UMB-EV-Tracker\data\xslot_BT747_01_1500uLhr_z40um_mov_flush_adj_9_MMStack_Pos0.ome.csv
+    # UMB-EV-Tracker\data\Infocus_xslot_HCC1954_02_1500uLhr_z40um_mov_2.csv
+
+
+    TIFF_FILE = r"UMB-EV-Tracker\data\xslot_BT747_00_1500uLhr_z40um_mov_flush_adj_9_MMStack_Pos0.ome.tif"
     
     # Ground truth CSV (optional - set to None if not available)
-    GROUND_TRUTH_CSV = r"UMB-EV-Tracker\data\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv"
+    GROUND_TRUTH_CSV = r"UMB-EV-Tracker\data\xslot_BT747_01_1500uLhr_z40um_mov_flush_adj_9_MMStack_Pos0.ome.csv"
     
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
@@ -442,7 +453,6 @@ if __name__ == "__main__":
     # Check if ground truth exists (if specified)
     if GROUND_TRUTH_CSV and not os.path.exists(GROUND_TRUTH_CSV):
         print(f"Warning: Ground truth file not found: {GROUND_TRUTH_CSV}")
-        print("Continuing without metrics evaluation...")
         GROUND_TRUTH_CSV = None
     
     # Execute pipeline

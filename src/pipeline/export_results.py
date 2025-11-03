@@ -117,10 +117,11 @@ def export_tracks_to_csv(
     track_records = []
     
     for track_id, track in tracks.items():
+        track_length = len(track['frames'])
         record = {
             'tiff_filename': os.path.basename(tiff_filename),
             'particle_id': track_id,
-            'track_length': len(track['frames']),
+            'track_length': track_length,
             'start_frame': min(track['frames']),
             'end_frame': max(track['frames']),
             'duration': track['duration'],
@@ -193,7 +194,7 @@ def export_all_results(
     )
     
     # Export track summaries
-    tracks_path = os.path.join(output_dir, f"{tiff_filename}_ummaries.csv")
+    tracks_path = os.path.join(output_dir, f"{os.path.basename(tiff_filename)}_summaries.csv")
     export_tracks_to_csv(tracks, tiff_filename, tracks_path)
     
     print("\n" + "="*60)
