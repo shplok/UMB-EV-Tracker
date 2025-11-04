@@ -1,16 +1,3 @@
-"""
-Particle Detection Module for EV Detection Pipeline
-
-This module detects extracellular vesicles (EVs) in enhanced microscopy frames
-using template matching with specialized filters. It identifies particle
-locations and scores their detection confidence.
-
-Functions:
-- detect_particles_in_all_frames(): Main detection function
-- visualize_detection_results(): Create detection visualizations
-- analyze_detection_quality(): Basic detection assessment
-"""
-
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt

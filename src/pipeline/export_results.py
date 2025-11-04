@@ -11,19 +11,7 @@ def export_detections_to_csv(
     output_path: str,
     include_untracked: bool = True
 ) -> str:
-    """
-    Export all detections to CSV with particle tracking information.
-    
-    Args:
-        all_particles: Detection results from all frames
-        tracks: Track assignments and properties
-        tiff_filename: Name of the input TIFF file
-        output_path: Path where CSV will be saved
-        include_untracked: Whether to include detections not assigned to any track
-        
-    Returns:
-        str: Path to the created CSV file
-    """
+
     print("Exporting detection results to CSV...")
     
     # Create reverse mapping: frame -> position -> track_id
@@ -101,17 +89,7 @@ def export_tracks_to_csv(
     tiff_filename: str,
     output_path: str
 ) -> str:
-    """
-    Export track-level summary statistics to CSV.
-    
-    Args:
-        tracks: Track data with calculated properties
-        tiff_filename: Name of the input TIFF file
-        output_path: Path where CSV will be saved
-        
-    Returns:
-        str: Path to the created CSV file
-    """
+
     print("Exporting track summary to CSV...")
     
     track_records = []
@@ -166,19 +144,7 @@ def export_all_results(
     output_dir: str,
     include_untracked: bool = True
 ) -> Dict[str, str]:
-    """
-    Export all results to CSV files.
-    
-    Args:
-        all_particles: Detection results from all frames
-        tracks: Track assignments and properties
-        tiff_filename: Name of the input TIFF file
-        output_dir: Directory where CSVs will be saved
-        include_untracked: Whether to include untracked detections
-        
-    Returns:
-        Dict[str, str]: Paths to created CSV files
-    """
+
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     

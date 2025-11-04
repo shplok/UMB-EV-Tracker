@@ -1,16 +1,3 @@
-"""
-Filter Creation Module for EV Detection Pipeline
-
-This module creates and manages the specialized filters used for detecting
-extracellular vesicles (EVs) in microscopy images. It generates W-shaped
-filters optimized for ~20px diameter EVs.
-
-Functions:
-- create_large_ev_filter(): Creates the main EV detection filter
-- visualize_filter(): Creates basic filter visualizations
-- save_filter_data(): Saves filter parameters and data
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage

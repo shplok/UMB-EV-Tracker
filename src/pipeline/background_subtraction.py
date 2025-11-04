@@ -1,16 +1,3 @@
-"""
-Background Subtraction Module for EV Detection Pipeline
-
-This module handles the removal of static background elements from image sequences
-to enhance the visibility of moving particles (EVs). It uses temporal median filtering
-to create adaptive background models.
-
-Functions:
-- create_temporal_background(): Creates background models for all frames
-- subtract_background_from_stack(): Applies background subtraction
-- visualize_background_subtraction(): Creates before/after comparisons
-"""
-
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt

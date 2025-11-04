@@ -1,16 +1,3 @@
-"""
-Particle Tracking Module for EV Detection Pipeline
-
-This module links particle detections across frames to create trajectories,
-calculates motion properties, and provides comprehensive tracking analysis.
-
-Functions:
-- track_particles_across_frames(): Link detections into tracks
-- calculate_track_properties(): Compute motion and intensity properties
-- visualize_tracking_results(): Create track visualizations
-- analyze_tracking_quality(): Basic tracking assessment
-"""
-
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt

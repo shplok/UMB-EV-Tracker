@@ -1,15 +1,3 @@
-"""
-Image Loading Module for EV Detection Pipeline
-
-This module handles the loading and initial preprocessing of TIFF image stacks.
-It provides functions to load microscopy data and prepare it for analysis.
-
-Functions:
-- load_tiff_stack(): Loads TIFF files and returns numpy arrays
-- validate_image_stack(): Checks image stack integrity
-- get_stack_info(): Returns metadata about the loaded stack
-"""
-
 import numpy as np
 import tifffile as tiff
 import os

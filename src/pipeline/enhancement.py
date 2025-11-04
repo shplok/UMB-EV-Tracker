@@ -1,15 +1,3 @@
-"""
-Image Enhancement Module for EV Detection Pipeline
-
-This module enhances background-subtracted frames to improve particle visibility.
-It applies contrast enhancement, noise reduction, and normalization techniques
-to prepare images for particle detection.
-
-Functions:
-- enhance_movement_frames(): Main enhancement pipeline
-- visualize_enhancement(): Create before/after comparisons
-"""
-
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -52,18 +40,7 @@ def visualize_enhancement(subtracted_frames: np.ndarray,
                          enhanced_frames: np.ndarray,
                          output_dir: str,
                          num_samples: int = 6) -> List[str]:
-    """
-    Create visualizations showing the enhancement process
-    
-    Args:
-        subtracted_frames (np.ndarray): Input frames before enhancement
-        enhanced_frames (np.ndarray): Output frames after enhancement
-        output_dir (str): Directory to save visualizations
-        num_samples (int): Number of sample frames to show
-        
-    Returns:
-        List[str]: Paths to created visualization files
-    """
+
     print("Creating enhancement visualizations...")
     
     num_frames = len(subtracted_frames)
