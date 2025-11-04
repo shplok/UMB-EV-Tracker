@@ -42,8 +42,6 @@ def enhance_movement_frames(subtracted_frames: np.ndarray,
         
         # # Additional noise reduction - use larger kernel for 20px EVs
         enhanced = cv2.GaussianBlur(enhanced, (blur_kernel_size, blur_kernel_size), 0)
-        
-        # Store enhanced frame
         enhanced_frames[i] = enhanced
     
     print(f"Enhancement complete for {num_frames} frames")
