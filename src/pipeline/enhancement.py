@@ -34,15 +34,14 @@ def enhance_movement_frames(subtracted_frames: np.ndarray,
         # Take absolute difference to capture all changes
         diff_abs = np.abs(subtracted_frames[i])
         
-        # Normalize to 0-255 range
+        # # Normalize to 0-255 range
         diff_norm = cv2.normalize(diff_abs, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
         
-        # Apply CLAHE for better contrast
+        # # Apply CLAHE for better contrast
         enhanced = clahe.apply(diff_norm)
         
-        # # Additional noise reduction - use larger kernel for 20px EVs
+        # Additional noise reduction - use larger kernel for 20px EVs
         enhanced = cv2.GaussianBlur(enhanced, (blur_kernel_size, blur_kernel_size), 0)
-        
         # Store enhanced frame
         enhanced_frames[i] = enhanced
     
