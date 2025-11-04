@@ -41,7 +41,6 @@ from metrics.detection_metrics import evaluate_tracking_performance
 from metrics.compute_pr_roc import evaluate_with_pr_roc
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
-    """Create a timestamped output directory for results"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Place all outputs under an `out/` root directory for easier discovery
     root = "out"
