@@ -217,6 +217,22 @@ def run_ev_detection_pipeline(tiff_file: str,
             threshold=parameters['detection_threshold'],
             min_distance=parameters['min_distance']
         )
+
+        # # --------------------
+        # if ground_truth_csv:
+        #     from testCOM import overlay_com_vs_detections
+        #     overlay_dir = os.path.join(output_dir, "05_detection", "COM_overlays")
+        #     overlay_com_vs_detections(
+        #         enhanced_frames=enhanced_frames,
+        #         ev_filter=ev_filter,
+        #         ground_truth_csv=ground_truth_csv,
+        #         output_dir=overlay_dir,
+        #         num_examples=2,
+        #         detection_threshold=parameters['detection_threshold'],
+        #         min_distance=parameters['min_distance']
+        #     )
+        # # ----------------------
+
         
         det_dir = os.path.join(output_dir, "05_detection")
         visualize_detection_results(

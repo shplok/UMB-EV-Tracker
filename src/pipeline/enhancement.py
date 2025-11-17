@@ -25,12 +25,24 @@ def enhance_movement_frames(subtracted_frames: np.ndarray,
         # Normalize to 0-255 range
         diff_norm = cv2.normalize(diff_abs, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
         
-        # Apply CLAHE for better contrast
+        # # Apply CLAHE for better contrast
         enhanced = clahe.apply(diff_norm)
         
-        # # Additional noise reduction - use larger kernel for 20px EVs
+        # # # Additional noise reduction - use larger kernel for 20px EVs
         enhanced = cv2.GaussianBlur(enhanced, (blur_kernel_size, blur_kernel_size), 0)
         enhanced_frames[i] = enhanced
+
+        # Apply CLAHE for better contrast
+        
+        # k = blur_kernel_size if (blur_kernel_size % 2) == 1 else (blur_kernel_size | 1)
+        # denoised = cv2.GaussianBlur(diff_norm, (k, k), 0)
+
+        # # Then apply CLAHE for local contrast enhancement
+        # enhanced = clahe.apply(denoised)
+
+        enhanced_frames[i] = enhanced
+
+
     
     print(f"Enhancement complete for {num_frames} frames")
     return enhanced_frames
