@@ -1,3 +1,17 @@
+"""
+FIXED VERSION of compute_pr_roc.py
+
+This version properly handles False Negatives in PR/ROC curve computation.
+
+Key changes:
+1. Only the BEST match per GT frame is labeled as TP (not all matches)
+2. False Negatives are added to labels array with score=0.0
+3. Proper documentation of assumptions
+
+Author: Fixed by Claude (Nov 2025)
+Original issues: Missing FNs in labels array
+"""
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,9 +25,21 @@ def calculate_detection_labels_and_scores(all_particles: Dict[int, Dict[str, Lis
     """
     Create binary labels and scores for all detections across all frames.
     
+    FIXED VERSION: Properly includes False Negatives
+    
+    Args:
+        all_particles: Dict mapping frame_idx -> {'positions': [...], 'scores': [...]}
+        gt_track: Dict with 'frames' and 'positions' arrays
+        distance_threshold: Max distance for a detection to be considered TP
+    
     Returns:
         labels: Binary array (1 = true positive, 0 = false positive)
         scores: Detection confidence scores
+        
+    Note:
+        - For each GT frame, only the CLOSEST detection is considered
+        - Other detections in the same GT frame are labeled as FP
+        - Missed GT frames are added with label=1, score=0.0
     """
     labels = []
     scores = []
@@ -22,6 +48,10 @@ def calculate_detection_labels_and_scores(all_particles: Dict[int, Dict[str, Lis
     gt_positions = np.array(gt_track['positions'])
     gt_frame_to_idx = {frame: idx for idx, frame in enumerate(gt_track['frames'])}
     
+    # Track which GT frames were successfully detected
+    detected_gt_frames = set()
+    
+    # Process all detections
     for frame, particles in all_particles.items():
         if not particles['positions']:
             continue
@@ -30,19 +60,40 @@ def calculate_detection_labels_and_scores(all_particles: Dict[int, Dict[str, Lis
         det_scores = np.array(particles['scores'])
         
         if frame in gt_frames:
-            # Frame has ground truth - calculate distances
+            # Frame has ground truth - find best match
             gt_pos = gt_positions[gt_frame_to_idx[frame]]
             distances = np.sqrt(np.sum((det_positions - gt_pos)**2, axis=1))
             
-            # Label each detection
-            for dist, score in zip(distances, det_scores):
-                labels.append(1 if dist <= distance_threshold else 0)
-                scores.append(score)
+            # Find the BEST (closest) detection
+            best_idx = np.argmin(distances)
+            best_dist = distances[best_idx]
+            
+            # Label the best match
+            if best_dist <= distance_threshold:
+                labels.append(1)  # True Positive
+                scores.append(det_scores[best_idx])
+                detected_gt_frames.add(frame)
+            else:
+                labels.append(0)  # False Positive (detected but too far)
+                scores.append(det_scores[best_idx])
+            
+            # All OTHER detections in this frame are False Positives
+            for i in range(len(det_positions)):
+                if i != best_idx:
+                    labels.append(0)
+                    scores.append(det_scores[i])
         else:
-            # No ground truth - all detections are false positives
+            # No ground truth in this frame - all detections are False Positives
             for score in det_scores:
                 labels.append(0)
                 scores.append(score)
+    
+    # CRITICAL FIX: Add False Negatives as lowest-confidence "detections"
+    # These are GT frames that were either not detected or detected too far away
+    for frame in gt_frames:
+        if frame not in detected_gt_frames:
+            labels.append(1)  # This is a positive sample we failed to detect
+            scores.append(0.0)  # Assign lowest possible score
     
     return np.array(labels), np.array(scores)
 
@@ -52,8 +103,10 @@ def calculate_pr_roc_curves(all_particles: Dict[int, Dict[str, List]],
                             distance_threshold: float = 20.0) -> Dict[str, Any]:
     """
     Calculate Precision-Recall and ROC curves for detection performance.
+    
+    FIXED VERSION: Properly handles False Negatives
     """
-    # Get labels and scores
+    # Get labels and scores (now includes FNs)
     labels, scores = calculate_detection_labels_and_scores(all_particles, gt_track, distance_threshold)
     
     if len(labels) == 0 or np.sum(labels) == 0:
@@ -96,14 +149,91 @@ def calculate_pr_roc_curves(all_particles: Dict[int, Dict[str, List]],
         'optimal_j': optimal_j,
         'num_positives': np.sum(labels),
         'num_negatives': len(labels) - np.sum(labels),
-        'total_detections': len(labels)
+        'total_detections': len(labels),
+        # Additional diagnostic info
+        'num_fn_added': len(gt_track['frames']) - len([f for f in all_particles.keys() if f in gt_track['frames']])
     }
+
+
+def evaluate_at_multiple_thresholds(all_particles: Dict[int, Dict[str, List]],
+                                    gt_track: Dict[str, Any],
+                                    distance_threshold: float = 20.0,
+                                    score_thresholds: List[float] = None) -> pd.DataFrame:
+    """
+    Evaluate detection performance at multiple confidence score thresholds.
+    
+    FIXED VERSION: Properly calculates FN at each threshold
+    """
+    if score_thresholds is None:
+        score_thresholds = np.linspace(0, 1, 21)  # 0.0, 0.05, 0.10, ..., 1.0
+    
+    results = []
+    gt_frames = set(gt_track['frames'])
+    
+    for score_thresh in score_thresholds:
+        # Filter particles by score threshold
+        detected_gt_frames = set()
+        fp_count = 0
+        
+        for frame, particles in all_particles.items():
+            # Filter by score
+            high_score_positions = []
+            high_score_values = []
+            for pos, score in zip(particles['positions'], particles['scores']):
+                if score >= score_thresh:
+                    high_score_positions.append(pos)
+                    high_score_values.append(score)
+            
+            if not high_score_positions:
+                continue
+            
+            if frame in gt_frames:
+                # Check if any detection matches GT
+                gt_idx = np.where(gt_track['frames'] == frame)[0][0]
+                gt_pos = np.array(gt_track['positions'])[gt_idx]
+                
+                distances = np.sqrt(np.sum((np.array(high_score_positions) - gt_pos)**2, axis=1))
+                best_dist = np.min(distances)
+                
+                if best_dist <= distance_threshold:
+                    detected_gt_frames.add(frame)
+                    # Count extra detections as FP
+                    fp_count += len(high_score_positions) - 1
+                else:
+                    # All detections are FP (none close enough)
+                    fp_count += len(high_score_positions)
+            else:
+                # No GT in this frame - all detections are FP
+                fp_count += len(high_score_positions)
+        
+        # Calculate metrics
+        tp = len(detected_gt_frames)
+        fn = len(gt_frames) - tp
+        fp = fp_count
+        
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+        
+        results.append({
+            'score_threshold': score_thresh,
+            'true_positives': tp,
+            'false_positives': fp,
+            'false_negatives': fn,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1,
+            'num_detections': tp + fp
+        })
+    
+    return pd.DataFrame(results)
 
 
 def plot_pr_roc_curves(pr_roc_data: Dict[str, Any], output_dir: str) -> str:
     """
     Create visualization of PR and ROC curves.
     """
+    import os
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     
     # PR Curve
@@ -118,7 +248,7 @@ def plot_pr_roc_curves(pr_roc_data: Dict[str, Any], output_dir: str) -> str:
                label=f'Optimal (F1={pr_roc_data["optimal_f1"]:.3f}, thr={pr_roc_data["optimal_pr_threshold"]:.3f})')
     ax1.set_xlabel('Recall', fontsize=12)
     ax1.set_ylabel('Precision', fontsize=12)
-    ax1.set_title('Precision-Recall Curve', fontsize=14, fontweight='bold')
+    ax1.set_title('Precision-Recall Curve (FIXED)', fontsize=14, fontweight='bold')
     ax1.legend(loc='best')
     ax1.grid(True, alpha=0.3)
     ax1.set_xlim([0, 1.05])
@@ -135,7 +265,7 @@ def plot_pr_roc_curves(pr_roc_data: Dict[str, Any], output_dir: str) -> str:
                label=f'Optimal (J={pr_roc_data["optimal_j"]:.3f}, thr={pr_roc_data["optimal_roc_threshold"]:.3f})')
     ax2.set_xlabel('False Positive Rate', fontsize=12)
     ax2.set_ylabel('True Positive Rate', fontsize=12)
-    ax2.set_title('ROC Curve', fontsize=14, fontweight='bold')
+    ax2.set_title('ROC Curve (FIXED)', fontsize=14, fontweight='bold')
     ax2.legend(loc='best')
     ax2.grid(True, alpha=0.3)
     ax2.set_xlim([0, 1.05])
@@ -149,78 +279,18 @@ def plot_pr_roc_curves(pr_roc_data: Dict[str, Any], output_dir: str) -> str:
              bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
     
     plt.tight_layout(rect=[0, 0.05, 1, 1])
-    path = f"{output_dir}/pr_roc_curves.png"
+    path = os.path.join(output_dir, "pr_roc_curves.png")
     plt.savefig(path, dpi=300, bbox_inches='tight')
     plt.close()
     
     return path
 
 
-def evaluate_at_multiple_thresholds(all_particles: Dict[int, Dict[str, List]],
-                                    gt_track: Dict[str, Any],
-                                    distance_threshold: float = 20.0,
-                                    score_thresholds: List[float] = None) -> pd.DataFrame:
-    """
-    Evaluate detection performance at multiple confidence score thresholds.
-    """
-    if score_thresholds is None:
-        score_thresholds = np.linspace(0, 1, 21)  # 0.0, 0.05, 0.10, ..., 1.0
-    
-    results = []
-    
-    for score_thresh in score_thresholds:
-        # Filter particles by score threshold
-        filtered_particles = {}
-        for frame, particles in all_particles.items():
-            filtered_pos = []
-            filtered_scores = []
-            for pos, score in zip(particles['positions'], particles['scores']):
-                if score >= score_thresh:
-                    filtered_pos.append(pos)
-                    filtered_scores.append(score)
-            
-            if filtered_pos:
-                filtered_particles[frame] = {
-                    'positions': filtered_pos,
-                    'scores': filtered_scores
-                }
-        
-        # Calculate metrics
-        labels, scores = calculate_detection_labels_and_scores(
-            filtered_particles, gt_track, distance_threshold
-        )
-        
-        if len(labels) > 0:
-            tp = np.sum(labels)
-            fp = len(labels) - tp
-            fn = len(gt_track['frames']) - tp
-            
-            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-            recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-        else:
-            tp = fp = 0
-            fn = len(gt_track['frames'])
-            precision = recall = f1 = 0
-        
-        results.append({
-            'score_threshold': score_thresh,
-            'true_positives': tp,
-            'false_positives': fp,
-            'false_negatives': fn,
-            'precision': precision,
-            'recall': recall,
-            'f1_score': f1,
-            'num_detections': len(labels)
-        })
-    
-    return pd.DataFrame(results)
-
-
 def plot_threshold_analysis(threshold_df: pd.DataFrame, output_dir: str) -> str:
     """
     Visualize performance metrics across different thresholds.
     """
+    import os
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     # Plot 1: Precision, Recall, F1 vs Threshold
@@ -277,14 +347,13 @@ def plot_threshold_analysis(threshold_df: pd.DataFrame, output_dir: str) -> str:
         ax4.text(i, val, f'{val:.3f}', ha='center', va='bottom', fontweight='bold')
     
     plt.tight_layout()
-    path = f"{output_dir}/threshold_analysis.png"
+    path = os.path.join(output_dir, "threshold_analysis.png")
     plt.savefig(path, dpi=300, bbox_inches='tight')
     plt.close()
     
     return path
 
 
-# Add this function to integrate with your existing evaluation
 def evaluate_with_pr_roc(all_particles: Dict[int, Dict[str, List]],
                         ground_truth_csv: str,
                         output_dir: str,
@@ -292,15 +361,12 @@ def evaluate_with_pr_roc(all_particles: Dict[int, Dict[str, List]],
     """
     Complete PR/ROC analysis wrapper.
     
-    Args:
-        all_particles: Detection results from all frames
-        ground_truth_csv: Path to ground truth CSV file
-        output_dir: Directory to save outputs
-        distance_threshold: Distance threshold for matching (pixels)
+    FIXED VERSION: Uses corrected label computation
     """
+    import os
     from metrics.detection_metrics import load_ground_truth_track
     
-    print("\nCalculating PR and ROC curves...")
+    print("\nCalculating PR and ROC curves (FIXED VERSION)...")
     
     # Load ground truth
     gt_track = load_ground_truth_track(ground_truth_csv)
@@ -315,19 +381,21 @@ def evaluate_with_pr_roc(all_particles: Dict[int, Dict[str, List]],
     # Generate plots
     pr_roc_path = plot_pr_roc_curves(pr_roc_data, output_dir)
     
-    # Threshold analysis
+    # Threshold analysis with fixed FN calculation
     threshold_df = evaluate_at_multiple_thresholds(all_particles, gt_track, distance_threshold)
     threshold_path = plot_threshold_analysis(threshold_df, output_dir)
     
     # Save threshold data
-    csv_path = f"{output_dir}/threshold_analysis.csv"
+    csv_path = os.path.join(output_dir, "threshold_analysis.csv")
     threshold_df.to_csv(csv_path, index=False)
     
-    print(f"\nPR/ROC Analysis Results:")
+    print(f"\nPR/ROC Analysis Results (FIXED):")
     print(f"  Average Precision (AP): {pr_roc_data['avg_precision']:.3f}")
     print(f"  ROC AUC:                {pr_roc_data['roc_auc']:.3f}")
     print(f"  Optimal F1 Score:       {pr_roc_data['optimal_f1']:.3f}")
     print(f"  Optimal Threshold (F1): {pr_roc_data['optimal_pr_threshold']:.3f}")
+    if 'num_fn_added' in pr_roc_data:
+        print(f"  False Negatives added:  {pr_roc_data['num_fn_added']}")
     print(f"  Saved plots to:         {pr_roc_path}")
     print(f"  Saved analysis to:      {csv_path}")
     

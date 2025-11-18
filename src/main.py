@@ -39,6 +39,7 @@ from pipeline.tracking import (
 )
 from metrics.detection_metrics import evaluate_tracking_performance
 from metrics.compute_pr_roc import evaluate_with_pr_roc
+from testCOM import overlay_com_vs_detections
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -241,6 +242,20 @@ def run_ev_detection_pipeline(tiff_file: str,
         )
         analyze_detection_quality(all_particles, enhanced_frames, detection_params, det_dir)
         
+
+        if ground_truth_csv is not None:
+            print("\n  Creating COM overlay visualizations...")
+            overlay_dir = os.path.join(det_dir, "COM_overlays")
+            overlay_com_vs_detections(
+                enhanced_frames=enhanced_frames,
+                all_particles=all_particles,
+                ground_truth_csv=ground_truth_csv,
+                output_dir=overlay_dir,
+                num_examples=5,  # Number of example frames
+                distance_threshold=30.0,  # Same as your metrics
+                use_matplotlib=True  # Better quality plots
+            )
+
         total_detections = sum(len(frame_data['positions']) for frame_data in all_particles.values())
         
         results['stage_times']['detection'] = time.time() - stage_start
