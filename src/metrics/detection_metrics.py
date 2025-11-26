@@ -6,11 +6,15 @@ import os
 
 
 def load_ground_truth_track(csv_path: str) -> Dict[str, Any]:
-    """Load ground truth for a tracked particle"""
     df = pd.read_csv(csv_path)
     
     if 'EV_ID' in df.columns and df['EV_ID'].nunique() > 1:
         df = df[df['EV_ID'] == df['EV_ID'].iloc[0]]
+
+    # CSV 'Slice' is 1-indexed (e.g. 1..N). Convert to 0-indexed for internal use.
+    frames = np.array(df['Slice'].astype(int)) - 1
+    # Ensure no negative indices if CSV had unexpected zeros
+    frames = frames.clip(min=0)
     
     frames = df['Slice'].values
     positions = list(zip(df['X_COM'].values, df['Y_COM'].values))
