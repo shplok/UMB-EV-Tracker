@@ -16,7 +16,6 @@ def load_ground_truth_track(csv_path: str) -> Dict[str, Any]:
     # Ensure no negative indices if CSV had unexpected zeros
     frames = frames.clip(min=0)
     
-    frames = df['Slice'].values
     positions = list(zip(df['X_COM'].values, df['Y_COM'].values))
     
     return {
