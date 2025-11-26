@@ -427,14 +427,16 @@ if __name__ == "__main__":
 
     # TIFF LIST
     # UMB-EV-Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif
+    # UMB-EV-Tracker\data\tiff\new\xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.tif
 
     # CSV LIST
     # UMB-EV-Tracker/data/csv/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv
+    # UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.csv
 
-    TIFF_FILE = r"UMB-EV-Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif"
+    TIFF_FILE = r"UMB-EV-Tracker\data\tiff\new\xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.tif"
     
     # Ground truth CSV (optional - set to None if not available)
-    GROUND_TRUTH_CSV = r"UMB-EV-Tracker/data/csv/newer/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv"
+    GROUND_TRUTH_CSV = r"UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.csv"
     
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
