@@ -51,10 +51,10 @@ def export_detections_to_csv(
             if track_id is not None or include_untracked:
                 record = {
                     'tiff_filename': os.path.basename(tiff_filename),
-                    'particle_id': track_id if track_id is not None else -1,  # -1 for untracked
+                    'EV_ID': track_id if track_id is not None else -1,  # -1 for untracked
                     'frame_number': frame_idx,
-                    'x_center_of_mass': round(pos[0], 3),
-                    'y_center_of_mass': round(pos[1], 3),
+                    'X_COM': round(pos[0], 3),
+                    'Y_COM': round(pos[1], 3),
                     'detection_confidence': round(score, 4),
                     'tracked': 'Yes' if track_id is not None else 'No'
                 }
@@ -63,8 +63,8 @@ def export_detections_to_csv(
     # Create DataFrame
     df = pd.DataFrame(detection_records)
     
-    # Sort by particle_id and frame_number
-    df = df.sort_values(['particle_id', 'frame_number'], ascending=[True, True])
+    # Sort by EV_ID and frame_number
+    df = df.sort_values(['EV_ID', 'frame_number'], ascending=[True, True])
     
     # Save to CSV
     df.to_csv(output_path, index=False)
@@ -72,7 +72,7 @@ def export_detections_to_csv(
     # Print summary
     total_detections = len(df)
     tracked_detections = len(df[df['tracked'] == 'Yes'])
-    num_particles = len(df[df['particle_id'] != -1]['particle_id'].unique())
+    num_particles = len(df[df['EV_ID'] != -1]['EV_ID'].unique())
     
     print(f"\nExport Summary:")
     print(f"  Total detections exported: {total_detections}")
@@ -97,7 +97,7 @@ def export_tracks_to_csv(
     for track_id, track in tracks.items():
         record = {
             'tiff_filename': os.path.basename(tiff_filename),
-            'particle_id': track_id,
+            'EV_ID': track_id,
             'track_length': len(track['frames']),
             'start_frame': min(track['frames']),
             'end_frame': max(track['frames']),
@@ -126,7 +126,7 @@ def export_tracks_to_csv(
     df = pd.DataFrame(track_records)
     
     # Sort by track length (longest first) and particle ID
-    df = df.sort_values(['track_length', 'particle_id'], ascending=[False, True])
+    df = df.sort_values(['track_length', 'EV_ID'], ascending=[False, True])
     
     # Save to CSV
     df.to_csv(output_path, index=False)
