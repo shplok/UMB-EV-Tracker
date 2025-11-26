@@ -422,10 +422,19 @@ if __name__ == "__main__":
     # UMB-EV-Tracker\data\csv\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv -- Done
     # UMB-EV-Tracker\data\csv\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv -- Done
 
-    TIFF_FILE = r"UMB-EV-Tracker\data\tiff\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif"
+
+    #----------------NEWER FILES----------------#
+
+    # TIFF LIST
+    # UMB-EV-Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif
+
+    # CSV LIST
+    # UMB-EV-Tracker/data/csv/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv
+
+    TIFF_FILE = r"UMB-EV-Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif"
     
     # Ground truth CSV (optional - set to None if not available)
-    GROUND_TRUTH_CSV = r"UMB-EV-Tracker\data\csv\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv"
+    GROUND_TRUTH_CSV = r"UMB-EV-Tracker/data/csv/newer/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv"
     
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
@@ -446,7 +455,7 @@ if __name__ == "__main__":
         'clahe_grid_size': (8, 8),    # CLAHE tile size
         
         # Detection
-        'detection_threshold': 0.58,  # Correlation threshold
+        'detection_threshold': 0.55,  # Correlation threshold
         'min_distance': 30,           # Min separation between detections
         
         # Tracking

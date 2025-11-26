@@ -161,8 +161,17 @@ def export_all_results(
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
-    # Export detections (This is the one you asked for)
-    detections_path = os.path.join(output_dir, "all_detections.csv")
+    # --- MODIFICATION START ---
+    # 1. Get the base name of the TIFF file without the extension
+    tiff_base_name = os.path.basename(tiff_filename)
+    tiff_root_name, _ = os.path.splitext(tiff_base_name)
+    
+    # 2. Construct the new dynamic detection filename
+    detections_filename = f"{tiff_root_name}_all_detections.csv"
+    detections_path = os.path.join(output_dir, detections_filename)
+    # --- MODIFICATION END ---
+    
+    # Export detections
     export_detections_to_csv(
         all_particles, 
         tracks, 
@@ -171,8 +180,12 @@ def export_all_results(
         include_untracked
     )
     
-    # Export track summaries
+    # Export track summaries (You might want to apply the same naming scheme here)
     tracks_path = os.path.join(output_dir, f"track_summaries.csv")
+    # For consistency, you could rename the line above to:
+    # tracks_filename = f"{tiff_root_name}_track_summaries.csv"
+    # tracks_path = os.path.join(output_dir, tracks_filename)
+    
     export_tracks_to_csv(tracks, tiff_filename, tracks_path)
     
     print("\n" + "="*60)
