@@ -40,6 +40,9 @@ def load_ground_truth(csv_path: str, frame_column: str = "Slice") -> Dict[int, L
     
     # Group by frame and extract positions
     gt_positions = {}
+
+    df['frame_index'] = df[frame_column].astype(int) - 1
+    
     for frame_idx, group in df.groupby(frame_column):
         positions = list(zip(group['X_COM'].values, group['Y_COM'].values))
         gt_positions[int(frame_idx)] = positions
@@ -169,7 +172,7 @@ def create_matplotlib_overlay(
         circle = Circle((x_gt, y_gt), 10, color='lime', fill=False, linewidth=2)
         ax1.add_patch(circle)
         ax1.plot(x_gt, y_gt, 'g+', markersize=10, markeredgewidth=2)
-    ax1.set_title(f'Frame {frame_idx}: Ground Truth ({len(gt_positions)} particles)', fontsize=12)
+    ax1.set_title(f'Frame {frame_idx + 1}: Ground Truth ({len(gt_positions)} particles)', fontsize=12)
     ax1.axis('off')
     
     # Panel 2: Detections only
@@ -340,7 +343,7 @@ def create_summary_figure(
             axes[0, i].plot(x, y, 'g+', markersize=10, markeredgewidth=2)
             circle = Circle((x, y), 10, color='lime', fill=False, linewidth=1.5)
             axes[0, i].add_patch(circle)
-        axes[0, i].set_title(f'Frame {frame_idx}\nGT: {len(gt_pos)}', fontsize=10)
+        axes[0, i].set_title(f'Frame {frame_idx + 1}\nGT: {len(gt_pos)}', fontsize=10)
         axes[0, i].axis('off')
         
         # Bottom row: Detections

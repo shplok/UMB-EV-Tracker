@@ -40,6 +40,7 @@ from pipeline.tracking import (
 from metrics.detection_metrics import evaluate_tracking_performance
 from metrics.compute_pr_roc import evaluate_with_pr_roc
 from testCOM import overlay_com_vs_detections
+from pipeline.export_results import export_all_results
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -340,6 +341,19 @@ def run_ev_detection_pipeline(tiff_file: str,
             except Exception as e:
                 print(f"  Warning: Metrics evaluation failed: {str(e)}")
                 results['stage_results']['metrics'] = {'error': str(e)}
+
+
+        print("STAGE 7.5?: CSV EXPORT")
+        print("-" * 30)
+                
+        export_paths = export_all_results(
+            all_particles=all_particles,
+            tracks=tracks,
+            tiff_filename=tiff_file,
+            output_dir=output_dir,
+            include_untracked=True  # This ensures -1 IDs are included
+        )
+        results['export_paths'] = export_paths
 
         # Stage 8: Final Documentation
         print("\nSTAGE 8: FINAL DOCUMENTATION")
