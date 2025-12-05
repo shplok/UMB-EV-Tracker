@@ -39,7 +39,7 @@ from pipeline.tracking import (
 )
 from metrics.detection_metrics import evaluate_tracking_performance
 from metrics.compute_pr_roc import evaluate_with_pr_roc
-from testCOM import overlay_com_vs_detections
+from metrics.testCOM import overlay_com_vs_detections
 from pipeline.export_results import export_all_results
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:

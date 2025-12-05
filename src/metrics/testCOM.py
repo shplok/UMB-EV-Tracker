@@ -159,9 +159,7 @@ def create_matplotlib_overlay(
     distance_threshold: float,
     stats: Dict
 ):
-    """Create overlay using matplotlib for better quality."""
 
-    # frame = frame[500:-500, 1200//3:1200//2] --- check into later
     
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     
