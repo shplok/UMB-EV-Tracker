@@ -53,7 +53,7 @@ print(f"Global AP: {results['global_ap']:.3f}")
 
 2. Install dependencies:
    ```bash
-   cd UMB-EV-Tracker
+   cd UMB_EV_Tracker
    pip install -r requirements.txt
    ```
 
@@ -64,17 +64,17 @@ print(f"Global AP: {results['global_ap']:.3f}")
 
 ## Important: Running Location
 
-** !!! All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from the `src/` directory.**
+** !!! All Python scripts must be run from the project root directory (`UMB_EV_Tracker/`), NOT from the `src/` directory.**
 
 ### Correct:
 ```bash
-cd UMB-EV-Tracker/
+cd UMB_EV_Tracker/
 python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"
 ```
 
 ### Incorrect:
 ```bash
-cd UMB-EV-Tracker/src/
+cd UMB_EV_Tracker/src/
 python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"  # This will fail with import errors!
 ```
 
@@ -259,7 +259,7 @@ Each analysis creates timestamped directories with:
 ### Output Directory Structure
 
 ```
-UMB-EV-Tracker/
+UMB_EV_Tracker/
 ├── out/
 │   ├── global_metrics/
 │   │   └── run_(timestamp)/
@@ -417,7 +417,7 @@ results = tracker.run("movie.tif", "ground_truth.csv")
 Run the comprehensive test suite:
 
 ```bash
-# From project root (UMB-EV-Tracker/)
+# From project root (UMB_EV_Tracker/)
 python src/test_all_features.py
 ```
 
@@ -441,7 +441,7 @@ ImportError: No module named 'src'
 ```
 **Solution:** Make sure you're running from the project root directory:
 ```bash
-cd UMB-EV-Tracker/
+cd UMB_EV_Tracker/
 python src/test_all_features.py
 ```
 
@@ -605,7 +605,7 @@ Slice,X_COM,Y_COM,EV_ID
 ## Project Structure
 
 ```
-UMB-EV-Tracker/
+UMB_EV_Tracker/
 ├── src/
 │   ├── ev_tracker.py          # Main API interface
 │   ├── test_all_features.py   # Test suite
