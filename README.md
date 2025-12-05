@@ -484,7 +484,7 @@ csv_path = os.path.abspath("data/csv/ground_truth.csv")
 class EVTracker(output_dir="../out")
 ```
 
-Initialize the tracker with optional output directory.
+Initialize the tracker with optional output directory (you may choose wehre you like to save, else out/).
 
 **Parameters:**
 - `output_dir` (str): Directory for output files. Default: `"../out"` (relative to `src/`)
