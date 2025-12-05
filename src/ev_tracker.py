@@ -103,7 +103,7 @@ class EVTracker:
         print(f"{'='*60}")
         
         # Use batch pipeline
-        from helpers.batch_main import run_global_batch_analysis
+        from src.helpers.batch_main import run_global_batch_analysis
         
         results = run_global_batch_analysis(
             dataset_list=dataset,
@@ -120,7 +120,7 @@ class EVTracker:
         print(f"Batch Analysis: {len(dataset_list)} files")
         print(f"{'='*60}")
         
-        from helpers.batch_main import run_global_batch_analysis
+        from src.helpers.batch_main import run_global_batch_analysis
         
         results = run_global_batch_analysis(
             dataset_list=dataset_list,

@@ -7,8 +7,8 @@ from datetime import datetime
 from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, auc
 
 # Import pipeline components
-from helpers.main import run_ev_detection_pipeline
-from metrics.detection_metrics import load_ground_truth_track
+from src.helpers.main import run_ev_detection_pipeline
+from src.metrics.detection_metrics import load_ground_truth_track
 
 def calculate_detection_labels_for_file(all_particles, gt_track, distance_threshold=20.0):
     labels = []

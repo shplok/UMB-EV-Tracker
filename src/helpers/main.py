@@ -7,40 +7,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import all pipeline modules
-from pipeline.image_loader import (
+from src.pipeline.image_loader import (
     load_tiff_stack, 
     validate_image_stack, 
     get_stack_info
 )
-from pipeline.filter_creation import (
+from src.pipeline.filter_creation import (
     create_large_ev_filter,
     visualize_filter,
     save_filter_data
 )
-from pipeline.background_subtraction import (
+from src.pipeline.background_subtraction import (
     create_temporal_background,
     subtract_background_from_stack,
     visualize_background_subtraction
 )
-from pipeline.enhancement import (
+from src.pipeline.enhancement import (
     enhance_movement_frames,
     visualize_enhancement
 )
-from pipeline.detection import (
+from src.pipeline.detection import (
     detect_particles_in_all_frames,
     visualize_detection_results,
     analyze_detection_quality
 )
-from pipeline.tracking import (
+from src.pipeline.tracking import (
     track_particles_across_frames,
     calculate_track_properties,
     visualize_tracking_results,
     analyze_tracking_quality
 )
-from metrics.detection_metrics import evaluate_tracking_performance
-from metrics.compute_pr_roc import evaluate_with_pr_roc
-from metrics.testCOM import overlay_com_vs_detections
-from pipeline.export_results import export_all_results
+from src.metrics.detection_metrics import evaluate_tracking_performance
+from src.metrics.compute_pr_roc import evaluate_with_pr_roc
+from src.metrics.testCOM import overlay_com_vs_detections
+from src.pipeline.export_results import export_all_results
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
