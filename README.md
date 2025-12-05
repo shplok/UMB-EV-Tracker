@@ -59,21 +59,21 @@ print(f"Global AP: {results['global_ap']:.3f}")
 
 3. Verify installation:
    ```bash
-   python -c "from src.ev_tracker import EVTracker; print('✓ Ready!')"
+   python -c "from src.ev_tracker import EVTracker; print('Ready!')"
    ```
 
 ## Important: Running Location
 
-**⚠️ All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from the `src/` directory.**
+**!!! All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from the `src/` directory.**
 
-### ✅ Correct:
+### Correct:
 ```bash
 cd UMB-EV-Tracker/
 python src/test_all_features.py
 python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"
 ```
 
-### ❌ Incorrect:
+### Incorrect:
 ```bash
 cd UMB-EV-Tracker/src/
 python test_all_features.py  # This will fail with import errors!
@@ -568,20 +568,6 @@ Contributions are welcome! Please:
 2. Create a feature branch
 3. Add tests for new features
 4. Submit a pull request
-
-## Citation
-
-If you use this software in your research, please cite:
-
-```
-EV Tracker - Extracellular Vesicle Detection and Tracking
-University of Massachusetts Boston
-2024-2025
-```
-
-## License
-
-[Add your license here]
 
 ## Support
 
