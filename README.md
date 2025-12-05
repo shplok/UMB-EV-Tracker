@@ -15,7 +15,7 @@ EV Tracker provides automated detection, tracking, and analysis of extracellular
 ## Quick Start
 
 ```python
-from ev_tracker import EVTracker
+from src.ev_tracker import EVTracker
 
 # Create tracker
 tracker = EVTracker()
