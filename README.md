@@ -64,7 +64,7 @@ print(f"Global AP: {results['global_ap']:.3f}")
 
 ## Important: Running Location
 
-**!!! All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from the `src/` directory.**
+** !!! All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from the `src/` directory.**
 
 ### Correct:
 ```bash
@@ -129,22 +129,42 @@ results = (EVTracker()
 
 ## Parameters
 
-### Detection Parameters
+### All Available Parameters
 
-| Parameter | Description | Default | Recommended Range |
-|-----------|-------------|---------|-------------------|
-| `threshold` | Detection confidence (0-1) | 0.55 | 0.4-0.7 |
-| `min_distance` | Minimum particle separation (pixels) | 30 | 20-40 |
-| `filter_radius` | Expected particle radius (pixels) | 10 | 5-15 |
-| `bg_window_size` | Background subtraction window (frames) | 15 | 5-30 |
+EVTracker exposes **13 configurable parameters** organized into 4 categories:
 
-### Tracking Parameters
+#### Detection Parameters
 
-| Parameter | Description | Default | Recommended Range |
-|-----------|-------------|---------|-------------------|
-| `max_distance` | Maximum movement per frame (pixels) | 25 | 15-40 |
-| `min_track_length` | Minimum frames for valid track | 5 | 3-15 |
-| `max_frame_gap` | Maximum missing frames in track | 3 | 1-10 |
+| Parameter | Type | Default | Description | Recommended Range |
+|-----------|------|---------|-------------|-------------------|
+| `threshold` | float | 0.55 | Detection confidence (0-1). Higher = fewer detections | 0.4-0.7 |
+| `min_distance` | int | 30 | Minimum separation between particles (pixels) | 20-40 |
+| `filter_radius` | int | 10 | Expected particle radius (pixels) | 5-15 |
+| `filter_size` | int | 41 | Size of detection filter matrix (pixels) | 21-61 (odd) |
+| `filter_sigma` | float | 2.0 | Gaussian smoothing for filter | 1.0-4.0 |
+
+#### Background & Enhancement Parameters
+
+| Parameter | Type | Default | Description | Recommended Range |
+|-----------|------|---------|-------------|-------------------|
+| `bg_window_size` | int | 15 | Temporal window for background subtraction (frames) | 5-30 |
+| `blur_kernel_size` | int | 7 | Noise reduction kernel size (pixels) | 3-15 (odd) |
+| `clahe_clip_limit` | float | 2.0 | Contrast enhancement limit | 1.0-4.0 |
+| `clahe_grid_size` | tuple | (8, 8) | Contrast enhancement tile size (width, height) | (4,4)-(16,16) |
+
+#### Tracking Parameters
+
+| Parameter | Type | Default | Description | Recommended Range |
+|-----------|------|---------|-------------|-------------------|
+| `max_distance` | int | 25 | Maximum particle movement per frame (pixels) | 15-40 |
+| `min_track_length` | int | 5 | Minimum frames to keep a track | 3-15 |
+| `max_frame_gap` | int | 3 | Maximum gap in frames for a track | 1-10 |
+
+#### Metrics Parameters
+
+| Parameter | Type | Default | Description | Recommended Range |
+|-----------|------|---------|-------------|-------------------|
+| `distance_threshold` | float | 30.0 | Distance threshold for metrics evaluation (pixels) | 15-50 |
 
 ### Setting Parameters
 
@@ -153,16 +173,48 @@ from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
 
-# Set individual parameters
-tracker.set_params(threshold=0.6)
-tracker.set_params(min_distance=35)
-
-# Set multiple parameters at once
+# Set basic parameters (most common)
 tracker.set_params(
     threshold=0.55,
     min_distance=30,
+    max_distance=25
+)
+
+# Set advanced parameters
+tracker.set_params(
+    filter_size=41,
+    filter_sigma=2.0,
+    blur_kernel_size=7,
+    clahe_clip_limit=2.0,
+    clahe_grid_size=(8, 8)
+)
+
+# Set tracking parameters
+tracker.set_params(
+    min_track_length=5,
+    max_frame_gap=3,
+    distance_threshold=30.0
+)
+
+# Or set everything at once
+tracker.set_params(
+    # Detection
+    threshold=0.55,
+    min_distance=30,
+    filter_radius=10,
+    filter_size=41,
+    filter_sigma=2.0,
+    # Background & Enhancement
+    bg_window_size=15,
+    blur_kernel_size=7,
+    clahe_clip_limit=2.0,
+    clahe_grid_size=(8, 8),
+    # Tracking
     max_distance=25,
-    min_track_length=5
+    min_track_length=5,
+    max_frame_gap=3,
+    # Metrics
+    distance_threshold=30.0
 )
 
 # View current parameters
@@ -444,17 +496,37 @@ Initialize the tracker with optional output directory.
 
 Set pipeline parameters. Returns `self` for method chaining.
 
-**Available Parameters:**
+**All Available Parameters (13 total):**
+
+*Detection:*
 - `threshold` (float): Detection confidence threshold (0.0-1.0)
 - `min_distance` (int): Minimum separation between particles (pixels)
+- `filter_radius` (int): Expected particle radius (pixels)
+- `filter_size` (int): Size of detection filter matrix (pixels, must be odd)
+- `filter_sigma` (float): Gaussian smoothing for filter
+
+*Background & Enhancement:*
+- `bg_window_size` (int): Temporal window for background subtraction (frames)
+- `blur_kernel_size` (int): Noise reduction kernel size (pixels, must be odd)
+- `clahe_clip_limit` (float): Contrast enhancement limit
+- `clahe_grid_size` (tuple): Contrast enhancement tile size (width, height)
+
+*Tracking:*
 - `max_distance` (int): Maximum particle movement per frame (pixels)
 - `min_track_length` (int): Minimum frames for valid track
-- `filter_radius` (int): Expected particle radius (pixels)
-- `bg_window_size` (int): Background subtraction temporal window (frames)
+- `max_frame_gap` (int): Maximum gap in frames for a track
+
+*Metrics:*
+- `distance_threshold` (float): Distance threshold for metrics evaluation (pixels)
 
 **Example:**
 ```python
-tracker.set_params(threshold=0.55, min_distance=30)
+tracker.set_params(
+    threshold=0.55, 
+    min_distance=30,
+    filter_size=41,
+    clahe_clip_limit=2.0
+)
 ```
 
 **`run(tiff_file: str, ground_truth_csv: str = None) -> Dict[str, Any]`**
