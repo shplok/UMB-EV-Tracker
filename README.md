@@ -330,34 +330,6 @@ tracker.set_params(threshold=0.45)  # Decrease threshold
 tracker.set_params(max_distance=35, max_frame_gap=5)
 ```
 
-## Project Structure
-
-```
-UMB-EV-Tracker/
-├── ev_tracker.py              # Main interface
-├── batch_main.py              # Batch processing pipeline
-├── main.py                    # Single file pipeline
-├── test_all_features.py       # Test suite
-│
-├── pipeline/                  # Core pipeline modules
-│   ├── image_loader.py
-│   ├── filter_creation.py
-│   ├── background_subtraction.py
-│   ├── enhancement.py
-│   ├── detection.py
-│   ├── tracking.py
-│   └── export_results.py
-│
-├── metrics/                   # Performance metrics
-│   ├── detection_metrics.py
-│   ├── compute_pr_roc.py
-│   └── improved_visualizations.py
-│
-└── data/                      # Your data files
-    ├── tiff/
-    └── csv/
-```
-
 ## API Reference
 
 ### EVTracker Class
