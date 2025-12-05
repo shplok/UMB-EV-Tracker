@@ -69,14 +69,13 @@ print(f"Global AP: {results['global_ap']:.3f}")
 ### Correct:
 ```bash
 cd UMB-EV-Tracker/
-python src/test_all_features.py
 python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"
 ```
 
 ### Incorrect:
 ```bash
 cd UMB-EV-Tracker/src/
-python test_all_features.py  # This will fail with import errors!
+python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"  # This will fail with import errors!
 ```
 
 This is because the code uses imports like `from helpers.batch_main import ...` which expect `src/` to be in the Python path, which only works when running from the parent directory.
@@ -263,11 +262,11 @@ Each analysis creates timestamped directories with:
 UMB-EV-Tracker/
 ├── out/
 │   ├── global_metrics/
-│   │   └── run_20241205_143022/
+│   │   └── run_(timestamp)/
 │   │       ├── global_performance_curves.png
 │   │       ├── global_pr_curve_data.csv
 │   │       └── file_summaries.csv
-│   └── ev_detection_results/
+│   └── ev_detection_results_(timestamp)/
 │       ├── 02_filter_creation/
 │       ├── 03_background_subtraction/
 │       ├── 04_enhancement/
