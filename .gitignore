@@ -181,6 +181,7 @@ cython_debug/
 *.TIF
 *.TIFF
 .csv
+data/csv/
 
 out/
 .mp4
