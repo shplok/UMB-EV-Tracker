@@ -215,7 +215,7 @@ UMB-EV-Tracker/
 │   │       ├── global_performance_curves.png
 │   │       ├── global_pr_curve_data.csv
 │   │       └── file_summaries.csv
-│   └── ev_detection_results_20241205_143022/
+│   └── ev_detection_results/
 │       ├── 02_filter_creation/
 │       ├── 03_background_subtraction/
 │       ├── 04_enhancement/
