@@ -11,10 +11,7 @@ from main import run_ev_detection_pipeline
 from metrics.detection_metrics import load_ground_truth_track
 
 def calculate_detection_labels_for_file(all_particles, gt_track, distance_threshold=20.0):
-    """
-    Helper to calculate labels/scores for a SINGLE file.
-    Exact copy of logic from compute_pr_roc.py to ensure consistency.
-    """
+
     labels = []
     scores = []
     
@@ -92,8 +89,6 @@ def run_global_batch_analysis(dataset_list):
         'blur_kernel_size': 5,
         'clahe_clip_limit': 2.0,
         'clahe_grid_size': (8, 8),
-        # CRITICAL: Use low threshold (0.1) so we can see the full curve behavior
-        # The PR curve calculation will filter this later.
         'detection_threshold': 0.1, 
         'min_distance': 30,
         'max_distance': 25,
@@ -112,7 +107,6 @@ def run_global_batch_analysis(dataset_list):
             print("  Skipping (File not found)")
             continue
 
-        # Run pipeline
         results = run_ev_detection_pipeline(
             tiff_file=tiff_file,
             output_dir=None, # Auto-generate
