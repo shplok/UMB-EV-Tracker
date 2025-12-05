@@ -30,7 +30,7 @@ class EVTracker:
         self.output_base_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
         
-        print("✓ EV Tracker initialized")
+        print("EV Tracker initialized")
         print(f"  Output: {output_dir}")
     
     def set_params(self, 
@@ -141,7 +141,3 @@ def quick_analyze(tiff_file: str,
                  ground_truth_csv: Optional[str] = None,
                  threshold: float = 0.55) -> Dict[str, Any]:
     return EVTracker().set_params(threshold=threshold).run(tiff_file, ground_truth_csv)
-
-
-if __name__ == "__main__":
-    print("University of Massachusetts Boston - EV Tracker")

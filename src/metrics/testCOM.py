@@ -1,14 +1,3 @@
-"""
-Visual Overlay Tool: Ground Truth COM vs Detected Positions
-
-This module creates side-by-side visualizations showing:
-- Ground truth particle centers (from CSV)
-- Detected particle positions (from detection algorithm)
-- Match quality assessment
-
-Author: Created for EV tracking validation
-"""
-
 import numpy as np
 import cv2
 import pandas as pd
@@ -19,16 +8,7 @@ from matplotlib.patches import Circle
 
 
 def load_ground_truth(csv_path: str, frame_column: str = "Slice") -> Dict[int, List[Tuple[float, float]]]:
-    """
-    Load ground truth center-of-mass positions from CSV.
-    
-    Args:
-        csv_path: Path to ground truth CSV file
-        frame_column: Column name containing frame numbers (default: "Slice")
-    
-    Returns:
-        Dictionary mapping frame_idx -> list of (x, y) positions
-    """
+
     df = pd.read_csv(csv_path)
     
     print(f"Loading ground truth from: {csv_path}")
@@ -52,7 +32,6 @@ def load_ground_truth(csv_path: str, frame_column: str = "Slice") -> Dict[int, L
     
     return gt_positions
 
-
 def overlay_com_vs_detections(
     enhanced_frames: np.ndarray,
     all_particles: Dict[int, Dict[str, List]],
@@ -62,18 +41,7 @@ def overlay_com_vs_detections(
     distance_threshold: float = 20.0,
     use_matplotlib: bool = True
 ):
-    """
-    Create visual overlays of ground truth vs detected positions.
-    
-    Args:
-        enhanced_frames: Array of enhanced frames [N, H, W]
-        all_particles: Detection results from detect_particles_in_all_frames
-        ground_truth_csv: Path to ground truth CSV
-        output_dir: Directory to save overlay images
-        num_examples: Number of example frames to visualize
-        distance_threshold: Max distance to consider detection as matching GT
-        use_matplotlib: If True, use matplotlib for better visualization
-    """
+
     os.makedirs(output_dir, exist_ok=True)
     
     print(f"\nCreating COM overlay visualizations...")
@@ -257,7 +225,6 @@ def create_opencv_overlay(
     distance_threshold: float,
     stats: Dict
 ):
-    """Create overlay using OpenCV (faster but lower quality)."""
     
     # Convert to RGB
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
@@ -321,7 +288,6 @@ def create_summary_figure(
     output_dir: str,
     distance_threshold: float
 ):
-    """Create a summary figure with all selected frames."""
     
     n_frames = len(selected_frames)
     fig, axes = plt.subplots(2, n_frames, figsize=(4*n_frames, 8))
@@ -360,9 +326,3 @@ def create_summary_figure(
     plt.close()
     
     print(f"  Summary figure saved: {summary_path}")
-
-
-# Standalone execution example
-if __name__ == "__main__":
-    print("This module provides COM overlay visualization tools.")
-    print("Import and use overlay_com_vs_detections() in your pipeline.")

@@ -335,7 +335,7 @@ tracker.set_params(max_distance=35, max_frame_gap=5)
 ### EVTracker Class
 
 ```python
-class EVTracker(output_dir="UMB-EV-Tracker/out")
+class EVTracker(output_dir="out")
 ```
 
 Initialize the tracker with optional output directory.
