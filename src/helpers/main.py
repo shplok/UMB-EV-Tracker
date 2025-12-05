@@ -39,14 +39,14 @@ from src.pipeline.tracking import (
 )
 from src.metrics.detection_metrics import evaluate_tracking_performance
 from src.metrics.compute_pr_roc import evaluate_with_pr_roc
-from src.metrics.testCOM import overlay_com_vs_detections
+# from src.metrics.testCOM import overlay_com_vs_detections
 from src.pipeline.export_results import export_all_results
 
 def create_output_directory(base_dir: str = "ev_detection_results") -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Place all outputs under an `out/` root directory for easier discovery
     root = "out"
-    output_dir = os.path.join("UMB-EV-Tracker", root, f"{base_dir}_{timestamp}")
+    output_dir = os.path.join(root, f"{base_dir}_{timestamp}")
     
     os.makedirs(output_dir, exist_ok=True)
     
@@ -219,20 +219,20 @@ def run_ev_detection_pipeline(tiff_file: str,
             min_distance=parameters['min_distance']
         )
 
-        # --------------------
-        if ground_truth_csv:
-            from src.metrics.testCOM import overlay_com_vs_detections
-            overlay_dir = os.path.join(output_dir, "05_detection", "COM_overlays")
-            overlay_com_vs_detections(
-                enhanced_frames=enhanced_frames,
-                ev_filter=ev_filter,
-                ground_truth_csv=ground_truth_csv,
-                output_dir=overlay_dir,
-                num_examples=2,
-                detection_threshold=parameters['detection_threshold'],
-                min_distance=parameters['min_distance']
-            )
-        # ----------------------
+        # # --------------------
+        # if ground_truth_csv:
+        #     from src.metrics.testCOM import overlay_com_vs_detections
+        #     overlay_dir = os.path.join(output_dir, "05_detection", "COM_overlays")
+        #     overlay_com_vs_detections(
+        #         enhanced_frames=enhanced_frames,
+        #         ev_filter=ev_filter,
+        #         ground_truth_csv=ground_truth_csv,
+        #         output_dir=overlay_dir,
+        #         num_examples=2,
+        #         detection_threshold=parameters['detection_threshold'],
+        #         min_distance=parameters['min_distance']
+        #     )
+        # # ----------------------
 
         
         det_dir = os.path.join(output_dir, "05_detection")
@@ -243,18 +243,18 @@ def run_ev_detection_pipeline(tiff_file: str,
         analyze_detection_quality(all_particles, enhanced_frames, detection_params, det_dir)
         
 
-        if ground_truth_csv is not None:
-            print("\n  Creating COM overlay visualizations...")
-            overlay_dir = os.path.join(det_dir, "COM_overlays")
-            overlay_com_vs_detections(
-                enhanced_frames=enhanced_frames,
-                all_particles=all_particles,
-                ground_truth_csv=ground_truth_csv,
-                output_dir=overlay_dir,
-                num_examples=5,  # Number of example frames
-                distance_threshold=30.0,  # Same as your metrics
-                use_matplotlib=True  # Better quality plots
-            )
+        # if ground_truth_csv is not None:
+        #     print("\n  Creating COM overlay visualizations...")
+        #     overlay_dir = os.path.join(det_dir, "COM_overlays")
+        #     overlay_com_vs_detections(
+        #         enhanced_frames=enhanced_frames,
+        #         all_particles=all_particles,
+        #         ground_truth_csv=ground_truth_csv,
+        #         output_dir=overlay_dir,
+        #         num_examples=5,  # Number of example frames
+        #         distance_threshold=30.0,  # Same as your metrics
+        #         use_matplotlib=True  # Better quality plots
+        #     )
 
         total_detections = sum(len(frame_data['positions']) for frame_data in all_particles.values())
         
@@ -412,34 +412,34 @@ def run_ev_detection_pipeline(tiff_file: str,
 if __name__ == "__main__":
     
     # TIFF LIST
-    # UMB-EV-Tracker\data\tiff\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif -- Done
-    # UMB-EV-Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z35um_mov_1_MMStack_Pos0.ome.tif -- Done
-    # UMB-EV-Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif -- Done
+    # UMB_EV_Tracker\data\tiff\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif -- Done
+    # UMB_EV_Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z35um_mov_1_MMStack_Pos0.ome.tif -- Done
+    # UMB_EV_Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif -- Done
 
     # CSV LIST
-    # UMB-EV-Tracker\data\csv\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv -- Done
-    # UMB-EV-Tracker\data\csv\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv -- Done
-    # UMB-EV-Tracker\data\csv\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv -- Done
+    # UMB_EV_Tracker\data\csv\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv -- Done
+    # UMB_EV_Tracker\data\csv\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv -- Done
+    # UMB_EV_Tracker\data\csv\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv -- Done
 
 
     #----------------NEWER FILES----------------#
 
     # TIFF LIST
-    # UMB-EV-Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif
-    # UMB-EV-Tracker\data\tiff\new\xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.tif
-    # UMB-EV-Tracker\data\tiff\new\xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.tif
-    # UMB-EV-Tracker\data\tiff\new\xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1_MMStack_Pos0.ome.tif
+    # UMB_EV_Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif
+    # UMB_EV_Tracker\data\tiff\new\xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.tif
+    # UMB_EV_Tracker\data\tiff\new\xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.tif
+    # UMB_EV_Tracker\data\tiff\new\xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1_MMStack_Pos0.ome.tif
 
     # CSV LIST
-    # UMB-EV-Tracker/data/csv/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv
-    # UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.csv
-    # UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.csv
-    # UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1.csv
+    # UMB_EV_Tracker/data/csv/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv
+    # UMB_EV_Tracker\data\csv\new\InfocusEVs_xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.csv
+    # UMB_EV_Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.csv
+    # UMB_EV_Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1.csv
 
-    TIFF_FILE = r"UMB-EV-Tracker\data\tiff\new\xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1_MMStack_Pos0.ome.tif"
+    TIFF_FILE = r"UMB_EV_Tracker\data\tiff\new\xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1_MMStack_Pos0.ome.tif"
     
     # Ground truth CSV (optional - set to None if not available)
-    GROUND_TRUTH_CSV = r"UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1.csv"
+    GROUND_TRUTH_CSV = r"UMB_EV_Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1.csv"
     
     # Output directory - will be auto-generated with timestamp if None
     OUTPUT_DIR = None
