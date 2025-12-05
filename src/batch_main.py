@@ -11,7 +11,6 @@ from main import run_ev_detection_pipeline
 from metrics.detection_metrics import load_ground_truth_track
 
 def calculate_detection_labels_for_file(all_particles, gt_track, distance_threshold=20.0):
-
     labels = []
     scores = []
     
@@ -67,7 +66,10 @@ def calculate_detection_labels_for_file(all_particles, gt_track, distance_thresh
             
     return labels, scores
 
-def run_global_batch_analysis(dataset_list):
+def run_global_batch_analysis(dataset_list, 
+                              batch_params=None, 
+                              distance_threshold=30.0):
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     global_output_dir = os.path.join("UMB-EV-Tracker", "out", "global_metrics", f"run_{timestamp}")
     os.makedirs(global_output_dir, exist_ok=True)
@@ -80,36 +82,46 @@ def run_global_batch_analysis(dataset_list):
     global_scores = []
     file_summaries = []
 
-    # 2. Fixed Parameters (Must use very low threshold to capture curve!)
-    BATCH_PARAMS = {
-        'filter_radius': 10,
-        'filter_size': 41,
-        'filter_sigma': 2.0,
-        'bg_window_size': 15,
-        'blur_kernel_size': 5,
-        'clahe_clip_limit': 2.0,
-        'clahe_grid_size': (8, 8),
-        'detection_threshold': 0.1, 
-        'min_distance': 30,
-        'max_distance': 25,
-        'min_track_length': 5,
-        'max_frame_gap': 3,
-        'num_sample_frames': 6,
-        'num_top_tracks': 5
-    }
+    # 2. Use provided parameters or defaults
+    if batch_params is None:
+        # Default parameters (must use low threshold to capture full PR curve!)
+        BATCH_PARAMS = {
+            'filter_radius': 10,
+            'filter_size': 41,
+            'filter_sigma': 2.0,
+            'bg_window_size': 15,
+            'blur_kernel_size': 7,
+            'clahe_clip_limit': 2.0,
+            'clahe_grid_size': (8, 8),
+            'detection_threshold': 0.1,  # Low threshold for PR curve
+            'min_distance': 30,
+            'max_distance': 25,
+            'min_track_length': 5,
+            'max_frame_gap': 3,
+            'num_sample_frames': 6,
+            'num_top_tracks': 5
+        }
+    else:
+        # Use provided params but ensure threshold is low for PR curve
+        BATCH_PARAMS = batch_params.copy()
+        BATCH_PARAMS['detection_threshold'] = 0.1  # Override for PR curve
 
     # 3. Process Files
     for tiff_file, csv_file in dataset_list:
         filename = os.path.basename(tiff_file)
         print(f"Processing: {filename}...")
         
-        if not os.path.exists(tiff_file) or not os.path.exists(csv_file):
-            print("  Skipping (File not found)")
+        if not os.path.exists(tiff_file):
+            print(f"  Skipping (TIFF not found): {tiff_file}")
+            continue
+            
+        if csv_file and not os.path.exists(csv_file):
+            print(f"  Skipping (CSV not found): {csv_file}")
             continue
 
         results = run_ev_detection_pipeline(
             tiff_file=tiff_file,
-            output_dir=None, # Auto-generate
+            output_dir=None,  # Auto-generate
             parameters=BATCH_PARAMS,
             ground_truth_csv=csv_file
         )
@@ -117,25 +129,29 @@ def run_global_batch_analysis(dataset_list):
         if results['success']:
             # Extract raw data for global metrics
             all_particles = results['stage_results']['detection']['all_particles']
-            gt_track = load_ground_truth_track(csv_file)
             
-            # Calculate labels for THIS file
-            labels, scores = calculate_detection_labels_for_file(
-                all_particles, gt_track, distance_threshold=30.0
-            )
-            
-            # Add to global lists
-            global_labels.extend(labels)
-            global_scores.extend(scores)
-            
-            # Store summary
-            metrics = results['stage_results'].get('pr_roc', {}).get('pr_roc_data', {})
-            file_summaries.append({
-                'filename': filename,
-                'file_ap': metrics.get('avg_precision', 0),
-                'total_detections': len(scores)
-            })
-            print(f"  > Added {len(scores)} data points to global pool.")
+            if csv_file:
+                gt_track = load_ground_truth_track(csv_file)
+                
+                # Calculate labels for THIS file
+                labels, scores = calculate_detection_labels_for_file(
+                    all_particles, gt_track, distance_threshold=distance_threshold
+                )
+                
+                # Add to global lists
+                global_labels.extend(labels)
+                global_scores.extend(scores)
+                
+                # Store summary
+                metrics = results['stage_results'].get('pr_roc', {}).get('pr_roc_data', {})
+                file_summaries.append({
+                    'filename': filename,
+                    'file_ap': metrics.get('avg_precision', 0),
+                    'total_detections': len(scores)
+                })
+                print(f"  > Added {len(scores)} data points to global pool.")
+            else:
+                print(f"  > No ground truth provided, skipping metrics.")
 
     # 4. Compute Global Metrics
     print("\n" + "="*60)
@@ -144,7 +160,7 @@ def run_global_batch_analysis(dataset_list):
 
     if not global_labels:
         print("No data collected.")
-        return
+        return {'success': False, 'error': 'No valid data collected'}
 
     g_labels = np.array(global_labels)
     g_scores = np.array(global_scores)
@@ -184,16 +200,27 @@ def run_global_batch_analysis(dataset_list):
     plt.tight_layout()
     plot_path = os.path.join(global_output_dir, "global_performance_curves.png")
     plt.savefig(plot_path, dpi=300)
+    plt.close()
     print(f"Saved plots to: {plot_path}")
 
     # 6. Save Data
-    # Save the raw curve data for custom plotting later
     curve_data = pd.DataFrame({'Recall': recall, 'Precision': precision})
     curve_data.to_csv(os.path.join(global_output_dir, "global_pr_curve_data.csv"), index=False)
     
     # Save file summaries
-    pd.DataFrame(file_summaries).to_csv(os.path.join(global_output_dir, "file_summaries.csv"), index=False)
+    if file_summaries:
+        pd.DataFrame(file_summaries).to_csv(
+            os.path.join(global_output_dir, "file_summaries.csv"), index=False
+        )
 
+    return {
+        'success': True,
+        'global_ap': global_ap,
+        'global_auc': global_auc,
+        'total_points': len(g_labels),
+        'output_dir': global_output_dir,
+        'file_summaries': file_summaries
+    }
 
 if __name__ == "__main__":
     # Define your dataset here
@@ -229,3 +256,4 @@ if __name__ == "__main__":
     ]
     
     run_global_batch_analysis(DATASET)
+    
