@@ -4,7 +4,7 @@ A simplified, object-oriented interface for analyzing extracellular vesicle (EV)
 
 ## Overview
 
-Our EV Tracker solution provides automated detection, tracking, and analysis of extracellular vesicles in TIFF image stacks. The pipeline includes:
+EV Tracker provides automated detection, tracking, and analysis of extracellular vesicles in TIFF image stacks. The pipeline includes:
 
 - **Background subtraction** - Temporal median filtering
 - **Enhancement** - CLAHE contrast enhancement and noise reduction
@@ -38,20 +38,27 @@ print(f"Global AP: {results['global_ap']:.3f}")
 ### Requirements
 
 - Python 3.7+
-- NumPy
-- OpenCV (cv2)
-- Matplotlib
-- Pandas
-- SciPy
-- scikit-learn
-- tifffile
+- NumPy >= 1.19.0
+- OpenCV >= 4.5.0
+- Matplotlib >= 3.3.0
+- Pandas >= 1.1.0
+- SciPy >= 1.5.0
+- scikit-learn >= 0.24.0
+- tifffile >= 2020.9.3
+- tqdm >= 4.50.0 (optional, for progress bars)
 
 ### Setup
 
 1. Clone or download this repository
+
 2. Install dependencies:
    ```bash
-   pip install numpy opencv-python matplotlib pandas scipy scikit-learn tifffile
+   pip install -r requirements.txt
+   ```
+
+   Or install manually:
+   ```bash
+   pip install numpy opencv-python matplotlib pandas scipy scikit-learn tifffile tqdm
    ```
 
 3. Verify installation:
@@ -234,7 +241,7 @@ tracker.set_params(max_distance=15, max_frame_gap=2)
 
 - **Position Error < 10px**: High accuracy
 - **Position Error 10-20px**: Moderate accuracy
-- **Position Error > 20px**: Review detection threshold
+- **Position Error > 20px**: Review detection threshold or double check that frames are lining up.
 
 ## Examples
 
@@ -290,18 +297,6 @@ print(f"Global AP: {results['global_ap']:.3f}")
 print(f"Processed {len(datasets)} files")
 ```
 
-## Testing
-
-Run the test suite to verify installation:
-
-```bash
-# Run all tests
-python test_all_features.py
-
-# Interactive mode (select specific tests)
-python test_all_features.py --interactive
-```
-
 The test suite includes:
 - Import and initialization tests
 - Parameter setting and validation
@@ -318,7 +313,7 @@ The test suite includes:
 ```python
 ImportError: cannot import name 'EVTracker'
 ```
-→ Make sure you're in the project directory containing `ev_tracker.py`
+ Make sure you're in the project directory containing `ev_tracker.py`
 
 **Too Many False Positives**
 ```python
@@ -398,17 +393,6 @@ Initialize the tracker with optional output directory.
 - Quick one-liner analysis
 - Returns: Results dictionary
 
-## Citation
-
-If you use this software in your research, please cite:
-
-```
-[Your citation information here]
-```
-
-## License
-
-[Your license information here]
 
 ## Contributing
 
@@ -421,14 +405,10 @@ Contributions are welcome! Please:
 
 For issues, questions, or suggestions:
 - Open an issue on GitHub
-- Contact: [Your contact information]
+- Contact: s.bowerman.cs@gmail.com
 
 ## Acknowledgments
 
-Developed for extracellular vesicle tracking research at [Your Institution].
+Developed for extracellular vesicle tracking research at University of Massachusetts - Boston.
 
 ---
-
-**Version**: 2.0 (Simplified Interface)  
-**Last Updated**: December 2024  
-**Python**: 3.7+
