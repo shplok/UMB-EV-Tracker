@@ -5,7 +5,7 @@ from datetime import datetime
 
 class EVTracker:
 
-    def __init__(self, output_dir: str = "UMB-EV-Tracker/out"):
+    def __init__(self, output_dir: str = "../out"):
         # Detection parameters
         self.threshold = 0.55
         self.min_distance = 30
