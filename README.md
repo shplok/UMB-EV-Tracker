@@ -38,14 +38,14 @@ print(f"Global AP: {results['global_ap']:.3f}")
 ### Requirements
 
 - Python 3.7+
-- NumPy >= 1.19.0
-- OpenCV >= 4.5.0
-- Matplotlib >= 3.3.0
-- Pandas >= 1.1.0
-- SciPy >= 1.5.0
-- scikit-learn >= 0.24.0
-- tifffile >= 2020.9.3
-- tqdm >= 4.50.0 (optional, for progress bars)
+- NumPy
+- OpenCV
+- Matplotlib
+- Pandas
+- SciPy
+- scikit-learn
+- tifffile
+- tqdm
 
 ### Setup
 
@@ -53,25 +53,40 @@ print(f"Global AP: {results['global_ap']:.3f}")
 
 2. Install dependencies:
    ```bash
+   cd UMB-EV-Tracker
    pip install -r requirements.txt
-   ```
-
-   Or install manually:
-   ```bash
-   pip install numpy opencv-python matplotlib pandas scipy scikit-learn tifffile tqdm
    ```
 
 3. Verify installation:
    ```bash
-   python -c "from ev_tracker import EVTracker; print('✓ Ready!')"
+   python -c "from src.ev_tracker import EVTracker; print('✓ Ready!')"
    ```
+
+## Important: Running Location
+
+**⚠️ All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from the `src/` directory.**
+
+### ✅ Correct:
+```bash
+cd UMB-EV-Tracker/
+python src/test_all_features.py
+python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"
+```
+
+### ❌ Incorrect:
+```bash
+cd UMB-EV-Tracker/src/
+python test_all_features.py  # This will fail with import errors!
+```
+
+This is because the code uses imports like `from helpers.batch_main import ...` which expect `src/` to be in the Python path, which only works when running from the parent directory.
 
 ## Usage
 
 ### Basic Single File Analysis
 
 ```python
-from ev_tracker import EVTracker
+from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
 tracker.set_params(threshold=0.55, min_distance=30)
@@ -81,7 +96,7 @@ results = tracker.run("path/to/movie.tif", "path/to/ground_truth.csv")
 ### Batch Analysis
 
 ```python
-from ev_tracker import EVTracker
+from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
 datasets = [
@@ -97,7 +112,7 @@ print(f"Global Average Precision: {results['global_ap']:.3f}")
 ### Quick Analysis (One-liner)
 
 ```python
-from ev_tracker import quick_analyze
+from src.ev_tracker import quick_analyze
 
 results = quick_analyze("movie.tif", "ground_truth.csv", threshold=0.6)
 ```
@@ -105,6 +120,8 @@ results = quick_analyze("movie.tif", "ground_truth.csv", threshold=0.6)
 ### Method Chaining
 
 ```python
+from src.ev_tracker import EVTracker
+
 results = (EVTracker()
           .set_params(threshold=0.55, min_distance=30, max_distance=25)
           .run("movie.tif", "ground_truth.csv"))
@@ -114,17 +131,17 @@ results = (EVTracker()
 
 ### Detection Parameters
 
-| Parameter | Description | Default | Range |
-|-----------|-------------|---------|-------|
-| `threshold` | Detection confidence (0-1) | 0.55 | 0.0-1.0 |
+| Parameter | Description | Default | Recommended Range |
+|-----------|-------------|---------|-------------------|
+| `threshold` | Detection confidence (0-1) | 0.55 | 0.4-0.7 |
 | `min_distance` | Minimum particle separation (pixels) | 30 | 20-40 |
 | `filter_radius` | Expected particle radius (pixels) | 10 | 5-15 |
 | `bg_window_size` | Background subtraction window (frames) | 15 | 5-30 |
 
 ### Tracking Parameters
 
-| Parameter | Description | Default | Range |
-|-----------|-------------|---------|-------|
+| Parameter | Description | Default | Recommended Range |
+|-----------|-------------|---------|-------------------|
 | `max_distance` | Maximum movement per frame (pixels) | 25 | 15-40 |
 | `min_track_length` | Minimum frames for valid track | 5 | 3-15 |
 | `max_frame_gap` | Maximum missing frames in track | 3 | 1-10 |
@@ -132,13 +149,15 @@ results = (EVTracker()
 ### Setting Parameters
 
 ```python
+from src.ev_tracker import EVTracker
+
 tracker = EVTracker()
 
 # Set individual parameters
 tracker.set_params(threshold=0.6)
 tracker.set_params(min_distance=35)
 
-# Set multiple parameters
+# Set multiple parameters at once
 tracker.set_params(
     threshold=0.55,
     min_distance=30,
@@ -161,34 +180,48 @@ results = {
     'global_auc': 0.88,             # ROC AUC
     'total_points': 5432,           # Total detections analyzed
     'output_dir': 'path/to/results', # Output directory
-    'file_summaries': [...]         # Per-file metrics
+    'file_summaries': [...]         # Per-file metrics (list of dicts)
 }
 ```
 
 ### Output Files
 
-Each analysis creates:
+Each analysis creates timestamped directories with:
 
-- **Visualizations**: Detection overlays, tracking paths, performance plots
-- **CSV Exports**: All detections with coordinates and confidence scores
-- **Metrics**: Precision-recall curves, ROC curves, performance summaries
-- **Videos**: Detection visualization videos (optional)
+**Visualizations:**
+- Detection overlays with particle positions
+- Track paths showing particle movement
+- Performance plots (PR curves, ROC curves)
+- Enhanced frame comparisons
 
-Files are organized in timestamped directories:
+**Data Exports:**
+- `*_all_detections.csv` - All detections with coordinates, confidence, and track IDs
+- `track_summaries.csv` - Per-track statistics (length, velocity, etc.)
+- `threshold_analysis.csv` - Performance at different thresholds
+
+**Metrics:**
+- Precision-recall curves
+- ROC curves
+- Per-file performance summaries
+- Global metrics across all files (for batch analysis)
+
+### Output Directory Structure
+
 ```
-UMB-EV-Tracker/out/
-├── global_metrics/
-│   └── run_20241205_143022/
-│       ├── global_performance_curves.png
-│       ├── global_pr_curve_data.csv
-│       └── file_summaries.csv
-└── ev_detection_results_20241205_143022/
-    ├── 02_filter_creation/
-    ├── 03_background_subtraction/
-    ├── 04_enhancement/
-    ├── 05_detection/
-    ├── 06_tracking/
-    └── 07_metrics/
+UMB-EV-Tracker/
+├── out/
+│   ├── global_metrics/
+│   │   └── run_20241205_143022/
+│   │       ├── global_performance_curves.png
+│   │       ├── global_pr_curve_data.csv
+│   │       └── file_summaries.csv
+│   └── ev_detection_results_20241205_143022/
+│       ├── 02_filter_creation/
+│       ├── 03_background_subtraction/
+│       ├── 04_enhancement/
+│       ├── 05_detection/
+│       ├── 06_tracking/
+│       └── 07_metrics/
 ```
 
 ## Parameter Tuning
@@ -206,10 +239,10 @@ tracker.set_params(threshold=0.65)
 ### Particle Size
 
 ```python
-# For larger particles (~25px)
+# For larger particles (~25px diameter)
 tracker.set_params(filter_radius=12, min_distance=40)
 
-# For smaller particles (~10px)
+# For smaller particles (~10px diameter)
 tracker.set_params(filter_radius=5, min_distance=20)
 ```
 
@@ -227,65 +260,84 @@ tracker.set_params(max_distance=15, max_frame_gap=2)
 
 ### Available Metrics
 
-- **Detection Rate**: Percentage of ground truth frames detected
+- **Detection Rate**: Percentage of ground truth frames with successful detection
 - **Position Error**: Average distance between detections and ground truth (pixels)
-- **Average Precision (AP)**: Area under precision-recall curve
-- **ROC AUC**: Area under receiver operating characteristic curve
+- **Average Precision (AP)**: Area under precision-recall curve (0-1)
+- **ROC AUC**: Area under receiver operating characteristic curve (0-1)
 - **Track F1 Score**: Harmonic mean of track precision and recall
 
 ### Interpreting Results
 
+**Average Precision (AP):**
 - **AP > 0.8**: Excellent detection performance
 - **AP 0.6-0.8**: Good detection performance
 - **AP < 0.6**: Consider parameter tuning
 
-- **Position Error < 10px**: High accuracy
-- **Position Error 10-20px**: Moderate accuracy
-- **Position Error > 20px**: Review detection threshold or double check that frames are lining up.
+**Position Error:**
+- **< 10px**: High accuracy
+- **10-20px**: Moderate accuracy
+- **> 20px**: Review detection threshold or verify frame alignment with ground truth
+
+**Detection Rate:**
+- **> 75%**: Good tracking
+- **50-75%**: Moderate tracking
+- **< 50%**: Poor tracking, adjust parameters
 
 ## Examples
 
 ### Example 1: Basic Analysis
 
 ```python
-from ev_tracker import EVTracker
+from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
 results = tracker.run(
-    tiff_file="data/movie.tif",
-    ground_truth_csv="data/ground_truth.csv"
+    tiff_file="data/tiff/movie.tif",
+    ground_truth_csv="data/csv/ground_truth.csv"
 )
 
 if results['success']:
     print(f"Average Precision: {results['global_ap']:.3f}")
+    print(f"ROC AUC: {results['global_auc']:.3f}")
     print(f"Output saved to: {results['output_dir']}")
 ```
 
 ### Example 2: Parameter Sweep
 
 ```python
-from ev_tracker import EVTracker
+from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
 thresholds = [0.4, 0.5, 0.6, 0.7]
 
+best_ap = 0
+best_thresh = None
+
 for thresh in thresholds:
     tracker.set_params(threshold=thresh)
     results = tracker.run("movie.tif", "ground_truth.csv")
-    print(f"Threshold {thresh}: AP = {results['global_ap']:.3f}")
+    ap = results['global_ap']
+    
+    print(f"Threshold {thresh}: AP = {ap:.3f}")
+    
+    if ap > best_ap:
+        best_ap = ap
+        best_thresh = thresh
+
+print(f"\nBest threshold: {best_thresh} (AP = {best_ap:.3f})")
 ```
 
 ### Example 3: Batch Processing
 
 ```python
-from ev_tracker import EVTracker
+from src.ev_tracker import EVTracker
 import glob
 
 # Find all TIFF files
-tiff_files = glob.glob("data/tiff/*.tif")
-csv_files = glob.glob("data/csv/*.csv")
+tiff_files = sorted(glob.glob("data/tiff/*.tif"))
+csv_files = sorted(glob.glob("data/csv/*.csv"))
 
-# Create dataset list
+# Create dataset list (ensure matching pairs)
 datasets = list(zip(tiff_files, csv_files))
 
 # Run batch analysis
@@ -294,7 +346,28 @@ tracker.set_params(threshold=0.55, min_distance=30)
 results = tracker.run_batch(datasets)
 
 print(f"Global AP: {results['global_ap']:.3f}")
+print(f"Global AUC: {results['global_auc']:.3f}")
 print(f"Processed {len(datasets)} files")
+print(f"Total data points: {results['total_points']}")
+```
+
+### Example 4: Custom Output Directory
+
+```python
+from src.ev_tracker import EVTracker
+
+tracker = EVTracker(output_dir="my_results/experiment_1")
+tracker.set_params(threshold=0.55, min_distance=30)
+results = tracker.run("movie.tif", "ground_truth.csv")
+```
+
+## Testing
+
+Run the comprehensive test suite:
+
+```bash
+# From project root (UMB-EV-Tracker/)
+python src/test_all_features.py
 ```
 
 The test suite includes:
@@ -305,82 +378,213 @@ The test suite includes:
 - Method chaining
 - Parameter sweeps
 
+**Note:** Update the file paths in `test_all_features.py` (`TEST_TIFF`, `TEST_CSV`, `BATCH_DATASET`) to point to your actual data files before running tests.
+
 ## Troubleshooting
 
 ### Common Issues
 
-**Import Error**
-```python
-ImportError: cannot import name 'EVTracker'
+**1. Import Error**
 ```
- Make sure you're in the project directory containing `ev_tracker.py`
-
-**Too Many False Positives**
-```python
-tracker.set_params(threshold=0.65)  # Increase threshold
+ImportError: No module named 'src'
 ```
-
-**Missing Particles**
-```python
-tracker.set_params(threshold=0.45)  # Decrease threshold
+**Solution:** Make sure you're running from the project root directory:
+```bash
+cd UMB-EV-Tracker/
+python src/test_all_features.py
 ```
 
-**Fragmented Tracks**
+**2. Too Many False Positives**
 ```python
+# Increase threshold to be more selective
+tracker.set_params(threshold=0.65)
+```
+
+**3. Missing Particles**
+```python
+# Decrease threshold to detect dimmer particles
+tracker.set_params(threshold=0.45)
+```
+
+**4. Fragmented Tracks**
+```python
+# Allow larger movements and more frame gaps
 tracker.set_params(max_distance=35, max_frame_gap=5)
 ```
+
+**5. File Not Found Errors**
+```python
+# Use absolute paths or verify relative paths
+import os
+tiff_path = os.path.abspath("data/tiff/movie.tif")
+csv_path = os.path.abspath("data/csv/ground_truth.csv")
+```
+
+**6. Memory Issues with Large TIFF Stacks**
+- Process files individually instead of batch
+- Reduce `bg_window_size` parameter
+- Close other applications to free memory
 
 ## API Reference
 
 ### EVTracker Class
 
 ```python
-class EVTracker(output_dir="out")
+class EVTracker(output_dir="../out")
 ```
 
 Initialize the tracker with optional output directory.
 
+**Parameters:**
+- `output_dir` (str): Directory for output files. Default: `"../out"` (relative to `src/`)
+
 #### Methods
 
-**`set_params(**kwargs)`**
-- Set pipeline parameters
-- Returns: `self` (for method chaining)
-- Parameters: `threshold`, `min_distance`, `max_distance`, `min_track_length`, `filter_radius`, `bg_window_size`
+**`set_params(**kwargs) -> EVTracker`**
 
-**`run(tiff_file, ground_truth_csv=None)`**
-- Run analysis on a single file
-- Returns: Results dictionary with metrics and output paths
+Set pipeline parameters. Returns `self` for method chaining.
 
-**`run_batch(dataset_list)`**
-- Run batch analysis with global metrics
-- Parameters: List of (tiff_file, csv_file) tuples
-- Returns: Global results dictionary
+**Available Parameters:**
+- `threshold` (float): Detection confidence threshold (0.0-1.0)
+- `min_distance` (int): Minimum separation between particles (pixels)
+- `max_distance` (int): Maximum particle movement per frame (pixels)
+- `min_track_length` (int): Minimum frames for valid track
+- `filter_radius` (int): Expected particle radius (pixels)
+- `bg_window_size` (int): Background subtraction temporal window (frames)
+
+**Example:**
+```python
+tracker.set_params(threshold=0.55, min_distance=30)
+```
+
+**`run(tiff_file: str, ground_truth_csv: str = None) -> Dict[str, Any]`**
+
+Run analysis on a single TIFF file.
+
+**Parameters:**
+- `tiff_file` (str): Path to TIFF image stack
+- `ground_truth_csv` (str, optional): Path to ground truth CSV file
+
+**Returns:** Dictionary with keys:
+- `success` (bool): Whether analysis completed successfully
+- `global_ap` (float): Average Precision
+- `global_auc` (float): ROC AUC
+- `total_points` (int): Total detections
+- `output_dir` (str): Output directory path
+- `file_summaries` (list): Per-file metrics
+
+**`run_batch(dataset_list: List[Tuple[str, str]]) -> Dict[str, Any]`**
+
+Run batch analysis with global metrics across multiple files.
+
+**Parameters:**
+- `dataset_list` (list): List of (tiff_file, csv_file) tuples
+
+**Returns:** Same as `run()` but with global metrics across all files
+
+**Example:**
+```python
+datasets = [
+    ("movie1.tif", "gt1.csv"),
+    ("movie2.tif", "gt2.csv")
+]
+results = tracker.run_batch(datasets)
+```
 
 **`print_params()`**
-- Display current parameter settings
+
+Display current parameter settings in a formatted table.
 
 ### Functions
 
-**`quick_analyze(tiff_file, ground_truth_csv=None, threshold=0.55)`**
-- Quick one-liner analysis
-- Returns: Results dictionary
+**`quick_analyze(tiff_file: str, ground_truth_csv: str = None, threshold: float = 0.55) -> Dict[str, Any]`**
 
+Quick one-liner analysis with minimal setup.
+
+**Parameters:**
+- `tiff_file` (str): Path to TIFF file
+- `ground_truth_csv` (str, optional): Path to ground truth
+- `threshold` (float): Detection threshold
+
+**Returns:** Results dictionary (same as `run()`)
+
+**Example:**
+```python
+from src.ev_tracker import quick_analyze
+results = quick_analyze("movie.tif", "ground_truth.csv", threshold=0.6)
+```
+
+## Ground Truth Format
+
+Ground truth CSV files should have the following columns:
+
+- `Slice`: Frame number (1-indexed)
+- `X_COM`: X coordinate (pixels)
+- `Y_COM`: Y coordinate (pixels)
+- `EV_ID` (optional): Particle ID for tracking multiple particles
+
+**Example CSV:**
+```csv
+Slice,X_COM,Y_COM,EV_ID
+1,123.4,456.7,1
+2,125.1,458.3,1
+3,126.8,460.2,1
+```
+
+## Project Structure
+
+```
+UMB-EV-Tracker/
+├── src/
+│   ├── ev_tracker.py          # Main API interface
+│   ├── test_all_features.py   # Test suite
+│   ├── requirements.txt       # Dependencies
+│   ├── helpers/
+│   │   ├── main.py           # Core pipeline
+│   │   └── batch_main.py     # Batch processing
+│   ├── metrics/
+│   │   ├── detection_metrics.py
+│   │   ├── compute_pr_roc.py
+│   │   └── improved_visualizations.py
+│   └── pipeline/
+│       ├── image_loader.py
+│       ├── filter_creation.py
+│       ├── background_subtraction.py
+│       ├── enhancement.py
+│       ├── detection.py
+│       ├── tracking.py
+│       └── export_results.py
+├── data/
+│   ├── tiff/                 # TIFF image stacks
+│   └── csv/                  # Ground truth files
+├── out/                      # Output directory
+└── README.md
+```
 
 ## Contributing
 
 Contributions are welcome! Please:
 1. Fork the repository
 2. Create a feature branch
-3. Submit a pull request
+3. Add tests for new features
+4. Submit a pull request
+
+## Citation
+
+If you use this software in your research, please cite:
+
+```
+EV Tracker - Extracellular Vesicle Detection and Tracking
+University of Massachusetts Boston
+2024-2025
+```
+
+## License
+
+[Add your license here]
 
 ## Support
 
 For issues, questions, or suggestions:
 - Open an issue on GitHub
-- Contact: s.bowerman.cs@gmail.com
-
-## Acknowledgments
-
-Developed for extracellular vesicle tracking research at University of Massachusetts - Boston.
-
----
+- Email: s.bowerman.cs@gmail.com
