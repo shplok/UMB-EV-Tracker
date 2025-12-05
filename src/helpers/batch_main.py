@@ -7,8 +7,8 @@ from datetime import datetime
 from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, auc
 
 # Import pipeline components
-from main import run_ev_detection_pipeline
-from metrics.detection_metrics import load_ground_truth_track
+from src.helpers.main import run_ev_detection_pipeline
+from src.metrics.detection_metrics import load_ground_truth_track
 
 def calculate_detection_labels_for_file(all_particles, gt_track, distance_threshold=20.0):
     labels = []
@@ -71,7 +71,15 @@ def run_global_batch_analysis(dataset_list,
                               distance_threshold=30.0):
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    global_output_dir = os.path.join("UMB-EV-Tracker", "out", "global_metrics", f"run_{timestamp}")
+
+    global_output_dir = os.path.join(
+    "..", 
+    "UMB-EV-Tracker", 
+    "out", 
+    "global_metrics", 
+    f"run_{timestamp}"
+    )
+    
     os.makedirs(global_output_dir, exist_ok=True)
 
     print(f"Starting Global Analysis on {len(dataset_list)} files...")
