@@ -258,7 +258,7 @@ EVTracker(output_dir="UMB-EV-Tracker/out")
 
 **`run_batch(dataset_list) -> Dict`**
 - Analyzes multiple files
-- ⚠️ **Overrides threshold to 0.1** for comprehensive PR curves
+- **Overrides threshold to 0.1** for comprehensive PR curves
 - `dataset_list`: List of (tiff_file, csv_file) tuples
 - Returns: Aggregated global metrics
 
