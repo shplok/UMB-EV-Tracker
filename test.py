@@ -2,9 +2,6 @@ from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
 
-# Set common parameters
-tracker.set_params(threshold=0.55, min_distance=30, max_distance=25)
-
 # Set all at once
 tracker.set_params(
     threshold=0.55, min_distance=30, filter_radius=10,
