@@ -364,7 +364,7 @@ def evaluate_with_pr_roc(all_particles: Dict[int, Dict[str, List]],
     FIXED VERSION: Uses corrected label computation
     """
     import os
-    from metrics.detection_metrics import load_ground_truth_track
+    from src.metrics.detection_metrics import load_ground_truth_track
     
     print("\nCalculating PR and ROC curves (FIXED VERSION)...")
     
