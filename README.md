@@ -15,7 +15,7 @@ EV Tracker provides automated detection, tracking, and analysis of extracellular
 ## Quick Start
 
 ```python
-from src.ev_tracker import EVTracker
+from ev_tracker import EVTracker
 
 # Create tracker
 tracker = EVTracker()
@@ -53,29 +53,30 @@ print(f"Global AP: {results['global_ap']:.3f}")
 
 2. Install dependencies:
    ```bash
-   cd UMB_EV_Tracker
+   cd UMB-EV-Tracker
    pip install -r requirements.txt
    ```
 
 3. Verify installation:
    ```bash
-   python -c "from src.ev_tracker import EVTracker; print('Ready!')"
+   python -c "from src.ev_tracker import EVTracker; print('✓ Ready!')"
    ```
 
 ## Important: Running Location
 
-** !!! All Python scripts must be run from the project root directory (`UMB_EV_Tracker/`), NOT from the `src/` directory.**
+**All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from the `src/` directory.**
 
 ### Correct:
 ```bash
-cd UMB_EV_Tracker/
+cd UMB-EV-Tracker/
+python src/test_all_features.py
 python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"
 ```
 
 ### Incorrect:
 ```bash
-cd UMB_EV_Tracker/src/
-python -c "from src.ev_tracker import EVTracker; tracker = EVTracker()"  # This will fail with import errors!
+cd UMB-EV-Tracker/src/
+python test_all_features.py  # This will fail with import errors!
 ```
 
 This is because the code uses imports like `from helpers.batch_main import ...` which expect `src/` to be in the Python path, which only works when running from the parent directory.
@@ -125,6 +126,88 @@ results = (EVTracker()
           .set_params(threshold=0.55, min_distance=30, max_distance=25)
           .run("movie.tif", "ground_truth.csv"))
 ```
+
+## Understanding `run()` vs `run_batch()`
+
+### CRITICAL DIFFERENCE
+
+**`run()`** and **`run_batch()`** behave differently with the threshold parameter:
+
+| Method | Threshold Behavior | Use When |
+|--------|-------------------|----------|
+| **`run()`** | Uses the specified threshold | Single file, want specific threshold results |
+| **`run_batch()`** | Overrides threshold to 0.1 | Multiple files, want comprehensive PR curves |
+
+### `run()` - Uses Your Threshold
+
+```python
+from src.ev_tracker import EVTracker
+
+tracker = EVTracker()
+tracker.set_params(threshold=0.6)  # This WILL be used
+
+results = tracker.run("movie.tif", "ground_truth.csv")
+# Detections made at threshold=0.6
+# Results reflect performance at YOUR chosen threshold
+```
+
+**Use `run()` when:**
+- Testing a single file
+- You want results at a specific threshold
+- Doing parameter tuning
+- You care about the exact threshold value
+
+### `run_batch()` - Overrides to 0.1 for PR Curves
+
+```python
+from src.ev_tracker import EVTracker
+
+tracker = EVTracker()
+tracker.set_params(threshold=0.6)  # This will be IGNORED
+
+datasets = [
+    ("movie1.tif", "gt1.csv"),
+    ("movie2.tif", "gt2.csv")
+]
+
+results = tracker.run_batch(datasets)
+# !!! Threshold is overridden to 0.1 for comprehensive PR curve
+# Captures ALL possible detections (even weak ones)
+# Computes PR/ROC curves across the full threshold range
+```
+
+**Use `run_batch()` when:**
+- Analyzing multiple files
+- You want comprehensive PR/ROC curves showing performance at ALL thresholds
+- Publication-quality metrics
+- You need global performance metrics across a dataset
+
+### Why the Difference?
+
+To compute an accurate **Precision-Recall curve**, you need:
+1. ALL possible detections (even weak ones with low confidence)
+2. Their confidence scores
+3. Then vary the threshold POST-HOC to plot precision vs recall
+
+If you only detect at threshold=0.6, you miss all detections scored 0.1-0.59, and your PR curve is incomplete.
+
+**Solution:**
+- `run()` - Normal detection at YOUR threshold
+- `run_batch()` - Get ALL detections (threshold=0.1) to compute full PR curve
+
+### Quick Reference
+
+```python
+# Use YOUR threshold (0.6)
+tracker.set_params(threshold=0.6)
+tracker.run("movie.tif", "gt.csv")  # Uses 0.6
+
+# Override to 0.1 for comprehensive PR curves
+tracker.set_params(threshold=0.6)
+tracker.run_batch([("movie.tif", "gt.csv")])  # Uses 0.1
+```
+
+**Note:** All other parameters (min_distance, max_distance, filter_radius, etc.) are respected by BOTH methods.
 
 ## Parameters
 
@@ -259,14 +342,14 @@ Each analysis creates timestamped directories with:
 ### Output Directory Structure
 
 ```
-UMB_EV_Tracker/
+UMB-EV-Tracker/
 ├── out/
 │   ├── global_metrics/
-│   │   └── run_(timestamp)/
+│   │   └── run_20241205_143022/
 │   │       ├── global_performance_curves.png
 │   │       ├── global_pr_curve_data.csv
 │   │       └── file_summaries.csv
-│   └── ev_detection_results_(timestamp)/
+│   └── ev_detection_results_20241205_143022/
 │       ├── 02_filter_creation/
 │       ├── 03_background_subtraction/
 │       ├── 04_enhancement/
@@ -417,7 +500,7 @@ results = tracker.run("movie.tif", "ground_truth.csv")
 Run the comprehensive test suite:
 
 ```bash
-# From project root (UMB_EV_Tracker/)
+# From project root (UMB-EV-Tracker/)
 python src/test_all_features.py
 ```
 
@@ -441,7 +524,7 @@ ImportError: No module named 'src'
 ```
 **Solution:** Make sure you're running from the project root directory:
 ```bash
-cd UMB_EV_Tracker/
+cd UMB-EV-Tracker/
 python src/test_all_features.py
 ```
 
@@ -484,7 +567,7 @@ csv_path = os.path.abspath("data/csv/ground_truth.csv")
 class EVTracker(output_dir="../out")
 ```
 
-Initialize the tracker with optional output directory (you may choose wehre you like to save, else out/).
+Initialize the tracker with optional output directory.
 
 **Parameters:**
 - `output_dir` (str): Directory for output files. Default: `"../out"` (relative to `src/`)
@@ -530,37 +613,69 @@ tracker.set_params(
 
 **`run(tiff_file: str, ground_truth_csv: str = None) -> Dict[str, Any]`**
 
-Run analysis on a single TIFF file.
+Run analysis on a single TIFF file **using your specified threshold**.
 
 **Parameters:**
 - `tiff_file` (str): Path to TIFF image stack
 - `ground_truth_csv` (str, optional): Path to ground truth CSV file
 
+**Threshold Behavior:**
+- **Uses YOUR configured threshold** (e.g., 0.55, 0.6, etc.)
+- All other parameters are also respected
+
 **Returns:** Dictionary with keys:
 - `success` (bool): Whether analysis completed successfully
-- `global_ap` (float): Average Precision
-- `global_auc` (float): ROC AUC
+- `global_ap` (float): Average Precision at your threshold
+- `global_auc` (float): ROC AUC based on detection scores
 - `total_points` (int): Total detections
 - `output_dir` (str): Output directory path
 - `file_summaries` (list): Per-file metrics
+
+**Example:**
+```python
+tracker = EVTracker()
+tracker.set_params(threshold=0.6)  # This threshold WILL be used
+
+results = tracker.run("movie.tif", "ground_truth.csv")
+print(f"AP at threshold 0.6: {results['global_ap']:.3f}")
+```
 
 **`run_batch(dataset_list: List[Tuple[str, str]]) -> Dict[str, Any]`**
 
 Run batch analysis with global metrics across multiple files.
 
+** IMPORTANT:** This method **overrides your threshold to 0.1** to capture all possible detections for computing comprehensive PR/ROC curves across the full threshold range.
+
 **Parameters:**
 - `dataset_list` (list): List of (tiff_file, csv_file) tuples
 
-**Returns:** Same as `run()` but with global metrics across all files
+**Threshold Behavior:**
+- **Threshold is OVERRIDDEN to 0.1** (ignores your set_params threshold)
+- All other parameters (min_distance, max_distance, etc.) ARE respected
+- This is intentional to generate comprehensive PR curves
+
+**Returns:** Same as `run()` but with global metrics aggregated across all files
 
 **Example:**
 ```python
+tracker = EVTracker()
+tracker.set_params(
+    threshold=0.6,      # ⚠️ This will be IGNORED (overridden to 0.1)
+    min_distance=30,    # ✅ This WILL be used
+    max_distance=25     # ✅ This WILL be used
+)
+
 datasets = [
     ("movie1.tif", "gt1.csv"),
     ("movie2.tif", "gt2.csv")
 ]
+
 results = tracker.run_batch(datasets)
+print(f"Global AP: {results['global_ap']:.3f}")  # Based on threshold=0.1
 ```
+
+**Why the override?**  
+To compute accurate Precision-Recall curves, we need ALL possible detections (even weak ones) with their confidence scores. Using threshold=0.1 ensures we capture the full range of detections, then PR/ROC curves show performance at all thresholds.
 
 **`print_params()`**
 
@@ -605,7 +720,7 @@ Slice,X_COM,Y_COM,EV_ID
 ## Project Structure
 
 ```
-UMB_EV_Tracker/
+UMB-EV-Tracker/
 ├── src/
 │   ├── ev_tracker.py          # Main API interface
 │   ├── test_all_features.py   # Test suite
@@ -640,8 +755,34 @@ Contributions are welcome! Please:
 3. Add tests for new features
 4. Submit a pull request
 
+## Citation
+
+If you use this software in your research, please cite:
+
+```
+EV Tracker - Extracellular Vesicle Detection and Tracking
+University of Massachusetts Boston
+2024-2025
+```
+
+## License
+
+[Add your license here]
+
 ## Support
 
 For issues, questions, or suggestions:
 - Open an issue on GitHub
 - Email: s.bowerman.cs@gmail.com
+
+## Acknowledgments
+
+Developed for extracellular vesicle tracking research at the University of Massachusetts Boston.
+
+Special thanks to the UMass Boston Computer Science and Biology departments for their support.
+
+---
+
+**Last Updated:** December 2024  
+**Version:** 1.0  
+**Python:** 3.7+

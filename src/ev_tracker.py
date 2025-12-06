@@ -2,9 +2,10 @@ import os
 from typing import Dict, List, Tuple, Optional, Any
 from datetime import datetime
 
+
 class EVTracker:
 
-    def __init__(self, output_dir: str = "UMB_EV_Tracker/out"):
+    def __init__(self, output_dir: str = "../out"):
         # Detection parameters
         self.threshold = 0.55
         self.min_distance = 30
@@ -46,6 +47,30 @@ class EVTracker:
                    clahe_grid_size: Optional[Tuple[int, int]] = None,
                    max_frame_gap: Optional[int] = None,
                    distance_threshold: Optional[float] = None) -> 'EVTracker':
+        """
+        Set pipeline parameters.
+        
+        Detection Parameters:
+            threshold (float): Detection confidence threshold (0.0-1.0)
+            min_distance (int): Minimum separation between particles (pixels)
+            filter_radius (int): Expected particle radius (pixels)
+            filter_size (int): Size of detection filter matrix
+            filter_sigma (float): Gaussian smoothing for filter
+            
+        Background & Enhancement:
+            bg_window_size (int): Temporal window for background subtraction (frames)
+            blur_kernel_size (int): Noise reduction kernel size
+            clahe_clip_limit (float): Contrast enhancement limit
+            clahe_grid_size (tuple): Contrast enhancement tile size (width, height)
+            
+        Tracking Parameters:
+            max_distance (int): Maximum particle movement per frame (pixels)
+            min_track_length (int): Minimum frames to keep a track
+            max_frame_gap (int): Maximum gap in frames for a track
+            
+        Metrics:
+            distance_threshold (float): Distance threshold for metrics evaluation (pixels)
+        """
 
         if threshold is not None:
             if not 0 <= threshold <= 1:
@@ -108,7 +133,8 @@ class EVTracker:
         results = run_global_batch_analysis(
             dataset_list=dataset,
             batch_params=self._get_params_dict(),
-            distance_threshold=self.distance_threshold
+            distance_threshold=self.distance_threshold,
+            override_threshold_for_pr_curve=False  # Use specified threshold
         )
         
         return results
@@ -131,6 +157,7 @@ class EVTracker:
         return results
     
     def print_params(self):
+        """Print all current parameter settings in organized groups."""
         print(f"\n{'='*70}")
         print("CURRENT PARAMETERS")
         print(f"{'='*70}")

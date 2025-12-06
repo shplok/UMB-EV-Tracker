@@ -68,13 +68,24 @@ def calculate_detection_labels_for_file(all_particles, gt_track, distance_thresh
 
 def run_global_batch_analysis(dataset_list, 
                               batch_params=None, 
-                              distance_threshold=30.0):
+                              distance_threshold=30.0,
+                              override_threshold_for_pr_curve=False):
+    """
+    Run batch analysis with global metrics.
+    
+    Args:
+        dataset_list: List of (tiff_file, csv_file) tuples
+        batch_params: Pipeline parameters dict
+        distance_threshold: Distance threshold for metrics
+        override_threshold_for_pr_curve: If True, force threshold to 0.1 for full PR curve.
+                                        If False, use the threshold from batch_params.
+    """
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     global_output_dir = os.path.join(
     "..", 
-    "UMB_EV_Tracker", 
+    "UMB-EV-Tracker", 
     "out", 
     "global_metrics", 
     f"run_{timestamp}"
@@ -110,9 +121,15 @@ def run_global_batch_analysis(dataset_list,
             'num_top_tracks': 5
         }
     else:
-        # Use provided params but ensure threshold is low for PR curve
+        # Use provided params
         BATCH_PARAMS = batch_params.copy()
-        BATCH_PARAMS['detection_threshold'] = 0.1  # Override for PR curve
+        
+        # Only override threshold if explicitly requested (for PR curve analysis)
+        if override_threshold_for_pr_curve:
+            print("  NOTE: Overriding threshold to 0.1 for comprehensive PR curve analysis")
+            BATCH_PARAMS['detection_threshold'] = 0.1
+        else:
+            print(f"  Using specified threshold: {BATCH_PARAMS.get('detection_threshold', 0.55)}")
 
     # 3. Process Files
     for tiff_file, csv_file in dataset_list:
@@ -234,34 +251,33 @@ def run_global_batch_analysis(dataset_list,
     
 #     DATASET = [
 #         (
-#             r"UMB_EV_Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif",
-#             r"UMB_EV_Tracker/data/csv/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv"
+#             r"UMB-EV-Tracker/data/tiff/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2_MMStack_Pos0.ome.tif",
+#             r"UMB-EV-Tracker/data/csv/new/xslot_BT747_PT03_xp4_750uLhr_z35um_mov_2.csv"
 #         ),
 #         (
-#             r"UMB_EV_Tracker\data\tiff\new\xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.tif",
-#             r"UMB_EV_Tracker\data\csv\new\InfocusEVs_xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.csv"
+#             r"UMB-EV-Tracker\data\tiff\new\xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.tif",
+#             r"UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_BT747_PT00_xp1_1500uLhr_z40um_mov_6_flush_adj_MMStack_Pos0.ome.csv"
 #         ),
 #         (
-#             r"UMB_EV_Tracker\data\tiff\new\xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.tif",
-#             r"UMB_EV_Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.csv"
+#             r"UMB-EV-Tracker\data\tiff\new\xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.tif",
+#             r"UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT03_xp4_1250uLhr_z40um_mov_1_MMStack_Pos0.ome.csv"
 #         ),
 #         (
-#             r"UMB_EV_Tracker\data\tiff\new\xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1_MMStack_Pos0.ome.tif",
-#             r"UMB_EV_Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1.csv"
+#             r"UMB-EV-Tracker\data\tiff\new\xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1_MMStack_Pos0.ome.tif",
+#             r"UMB-EV-Tracker\data\csv\new\InfocusEVs_xslot_HCC1954_PT00_xp1_750uLhr_z35um_mov_1.csv"
 #         ),
 #         (
-#             r"UMB_EV_Tracker\data\tiff\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif",
-#             r"UMB_EV_Tracker\data\csv\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv"
+#             r"UMB-EV-Tracker\data\tiff\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2_MMStack_Pos0.ome.tif",
+#             r"UMB-EV-Tracker\data\csv\xslot_BT747_03_1000uLhr_z35um_adjSP_mov_2.csv"
 #         ),
 #         (
-#             r"UMB_EV_Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z35um_mov_1_MMStack_Pos0.ome.tif",
-#             r"UMB_EV_Tracker\data\csv\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv"
+#             r"UMB-EV-Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z35um_mov_1_MMStack_Pos0.ome.tif",
+#             r"UMB-EV-Tracker\data\csv\xslot_HCC1954_01_500uLhr_z35um_mov_1.csv"
 #         ),
 #         (
-#             r"UMB_EV_Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif",
-#             r"UMB_EV_Tracker\data\csv\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv"
+#             r"UMB-EV-Tracker\data\tiff\xslot_HCC1954_01_500uLhr_z40um_mov_1_MMStack_Pos0.ome.tif",
+#             r"UMB-EV-Tracker\data\csv\xslot_HCC1954_01_500uLhr_z40um_mov_1.csv"
 #         ),
 #     ]
     
 #     run_global_batch_analysis(DATASET)
-    
