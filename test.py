@@ -1,8 +1,6 @@
 from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
-
-# Set all at once
 tracker.set_params(
     threshold=0.55, min_distance=30, filter_radius=10,
     bg_window_size=15, blur_kernel_size=7,

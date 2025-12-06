@@ -131,7 +131,6 @@ class EVTracker:
         return results
     
     def print_params(self):
-        """Print all current parameter settings in organized groups."""
         print(f"\n{'='*70}")
         print("CURRENT PARAMETERS")
         print(f"{'='*70}")
