@@ -117,17 +117,19 @@ def track_particles_across_frames(all_particles: Dict[int, Dict[str, List]],
                 
                 active_tracks[track_id] = True
     
-    # Filter tracks by minimum length
-    filtered_tracks = {}
+    # Mark tracks by whether they meet minimum length criteria
+    # Instead of filtering, we keep all tracks but flag them
     for track_id, track in tracks.items():
-        if len(track['frames']) >= min_track_length:
-            filtered_tracks[track_id] = track
+        track['meets_criteria'] = len(track['frames']) >= min_track_length
     
-    print(f"Tracking complete: {len(filtered_tracks)} tracks with ≥{min_track_length} frames")
+    # Count valid tracks
+    valid_tracks = {tid: t for tid, t in tracks.items() if t['meets_criteria']}
+    
+    print(f"Tracking complete: {len(valid_tracks)} tracks meeting criteria (≥{min_track_length} frames)")
     print(f"Total track segments created: {len(tracks)}")
-    print(f"Tracks meeting length criteria: {len(filtered_tracks)}")
+    print(f"Tracks below threshold: {len(tracks) - len(valid_tracks)}")
     
-    return filtered_tracks
+    return tracks  # Return ALL tracks, not just filtered ones
 
 
 def calculate_track_properties(tracks: Dict[int, Dict[str, Any]], 
@@ -360,7 +362,7 @@ def create_track_overview(image_stack: np.ndarray,
     legend_y = 30
     cv2.putText(frame_rgb, f"Showing top {tracks_drawn} tracks (score > 0.6)", 
                (10, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-    cv2.putText(frame_rgb, "● = start, ⊗ = end", 
+    cv2.putText(frame_rgb, "â— = start, âŠ— = end", 
                (10, legend_y + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
     
     overview_path = os.path.join(output_dir, "tracking_overview.png")
