@@ -70,16 +70,6 @@ def run_global_batch_analysis(dataset_list,
                               batch_params=None, 
                               distance_threshold=30.0,
                               override_threshold_for_pr_curve=False):
-    """
-    Run batch analysis with global metrics.
-    
-    Args:
-        dataset_list: List of (tiff_file, csv_file) tuples
-        batch_params: Pipeline parameters dict
-        distance_threshold: Distance threshold for metrics
-        override_threshold_for_pr_curve: If True, force threshold to 0.1 for full PR curve.
-                                        If False, use the threshold from batch_params.
-    """
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
