@@ -32,11 +32,11 @@ EV Tracker provides automated detection, tracking, and analysis of extracellular
 **All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from `src/`.**
 
 ```bash
-# ✅ Correct
+# Correct
 cd UMB-EV-Tracker/
 python src/test_all_features.py
 
-# ❌ Incorrect
+# Incorrect
 cd UMB-EV-Tracker/src/
 python test_all_features.py  # Import errors!
 ```
@@ -97,7 +97,7 @@ for thresh in [0.4, 0.5, 0.6, 0.7]:
 
 ## Parameters
 
-### All 13 Configurable Parameters
+### All Configurable Parameters
 
 #### Detection (5 parameters)
 
