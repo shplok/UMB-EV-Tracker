@@ -18,7 +18,7 @@ EV Tracker provides automated detection, tracking, and analysis of extracellular
 
 2. Install dependencies:
    ```bash
-   cd UMB-EV-Tracker
+   cd UMB_EV_Tracker
    pip install -r requirements.txt
    ```
 
@@ -29,15 +29,15 @@ EV Tracker provides automated detection, tracking, and analysis of extracellular
 
 ## Important: Running Location
 
-**All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from `src/`.**
+**All Python scripts must be run from the project root directory (`UMB_EV_Tracker/`), NOT from `src/`.**
 
 ```bash
 # Correct
-cd UMB-EV-Tracker/
+cd UMB_EV_Tracker/
 python src/test_all_features.py
 
 # Incorrect
-cd UMB-EV-Tracker/src/
+cd UMB_EV_Tracker/src/
 python test_all_features.py  # Import errors!
 ```
 
@@ -169,7 +169,7 @@ results = {
 ### Sample Output Directory Structure
 
 ```
-UMB-EV-Tracker/out/
+UMB_EV_Tracker/out/
 ├── global_metrics/                        # From run_batch()
 │   └── run_TIMESTAMP/
 │       ├── global_performance_curves.png  # PR & ROC plots
@@ -242,7 +242,7 @@ Slice,X_COM,Y_COM,EV_ID
 ### EVTracker Class
 
 ```python
-EVTracker(output_dir="UMB-EV-Tracker/out")
+EVTracker(output_dir="UMB_EV_Tracker/out")
 ```
 
 #### Methods
@@ -278,7 +278,7 @@ results = quick_analyze("movie.tif", "gt.csv", threshold=0.6)
 
 | Issue | Solution |
 |-------|----------|
-| `ImportError: No module named 'src'` | Run from project root: `cd UMB-EV-Tracker/` |
+| `ImportError: No module named 'src'` | Run from project root: `cd UMB_EV_Tracker/` |
 | Too many false positives | Increase threshold: `tracker.set_params(threshold=0.65)` |
 | Missing particles | Decrease threshold: `tracker.set_params(threshold=0.45)` |
 | Fragmented tracks | Increase movement/gaps: `tracker.set_params(max_distance=35, max_frame_gap=5)` |
@@ -294,7 +294,7 @@ python src/test_all_features.py
 ## Project Structure
 
 ```
-UMB-EV-Tracker/
+UMB_EV_Tracker/
 ├── src/
 │   ├── ev_tracker.py          # Main API
 │   ├── test_all_features.py   # Test suite

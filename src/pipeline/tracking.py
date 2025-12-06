@@ -117,17 +117,19 @@ def track_particles_across_frames(all_particles: Dict[int, Dict[str, List]],
                 
                 active_tracks[track_id] = True
     
-    # Filter tracks by minimum length
-    filtered_tracks = {}
+    # Mark tracks by whether they meet minimum length criteria
+    # Instead of filtering, we keep all tracks but flag them
     for track_id, track in tracks.items():
-        if len(track['frames']) >= min_track_length:
-            filtered_tracks[track_id] = track
+        track['meets_criteria'] = len(track['frames']) >= min_track_length
     
-    print(f"Tracking complete: {len(filtered_tracks)} tracks with ≥{min_track_length} frames")
+    # Count valid tracks
+    valid_tracks = {tid: t for tid, t in tracks.items() if t['meets_criteria']}
+    
+    print(f"Tracking complete: {len(valid_tracks)} tracks meeting criteria (≥{min_track_length} frames)")
     print(f"Total track segments created: {len(tracks)}")
-    print(f"Tracks meeting length criteria: {len(filtered_tracks)}")
+    print(f"Tracks below threshold: {len(tracks) - len(valid_tracks)}")
     
-    return filtered_tracks
+    return tracks  # Return ALL tracks, not just filtered ones
 
 
 def calculate_track_properties(tracks: Dict[int, Dict[str, Any]], 

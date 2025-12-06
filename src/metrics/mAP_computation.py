@@ -14,10 +14,10 @@ def compute_ap_from_csv(file_path):
     ap = np.trapezoid(df["precision"], df["recall"])
     return ap
 
-csv_files = glob.glob(r"UMB-EV-Tracker\out\*\07_metrics\threshold_analysis.csv")
+csv_files = glob.glob(r"UMB_EV_Tracker\out\*\07_metrics\threshold_analysis.csv")
 aps = [compute_ap_from_csv(f) for f in csv_files]
 map_score = np.mean(aps)
-output_dir = r"UMB-EV-Tracker\out\mAP_results"
+output_dir = r"UMB_EV_Tracker\out\mAP_results"
 os.makedirs(output_dir, exist_ok=True)
 
 # Create the plot
