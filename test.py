@@ -1,4 +1,3 @@
-from src.ev_tracker import quick_analyze
 from src.ev_tracker import EVTracker
 
 tracker = EVTracker()
