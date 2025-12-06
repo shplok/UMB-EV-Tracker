@@ -47,30 +47,6 @@ class EVTracker:
                    clahe_grid_size: Optional[Tuple[int, int]] = None,
                    max_frame_gap: Optional[int] = None,
                    distance_threshold: Optional[float] = None) -> 'EVTracker':
-        """
-        Set pipeline parameters.
-        
-        Detection Parameters:
-            threshold (float): Detection confidence threshold (0.0-1.0)
-            min_distance (int): Minimum separation between particles (pixels)
-            filter_radius (int): Expected particle radius (pixels)
-            filter_size (int): Size of detection filter matrix
-            filter_sigma (float): Gaussian smoothing for filter
-            
-        Background & Enhancement:
-            bg_window_size (int): Temporal window for background subtraction (frames)
-            blur_kernel_size (int): Noise reduction kernel size
-            clahe_clip_limit (float): Contrast enhancement limit
-            clahe_grid_size (tuple): Contrast enhancement tile size (width, height)
-            
-        Tracking Parameters:
-            max_distance (int): Maximum particle movement per frame (pixels)
-            min_track_length (int): Minimum frames to keep a track
-            max_frame_gap (int): Maximum gap in frames for a track
-            
-        Metrics:
-            distance_threshold (float): Distance threshold for metrics evaluation (pixels)
-        """
 
         if threshold is not None:
             if not 0 <= threshold <= 1:
