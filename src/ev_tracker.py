@@ -28,10 +28,8 @@ class EVTracker:
         self.distance_threshold = 30.0
         
         self.output_base_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
         
         print("EV Tracker initialized")
-        print(f"  Output: {output_dir}")
     
     def set_params(self, 
                    threshold: Optional[float] = None,
