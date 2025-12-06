@@ -166,7 +166,7 @@ results = {
 }
 ```
 
-### Directory Structure
+### Sample Output Directory Structure
 
 ```
 UMB-EV-Tracker/out/
