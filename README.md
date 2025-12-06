@@ -24,10 +24,10 @@ EV Tracker provides automated detection, tracking, and analysis of extracellular
 
 3. Verify installation:
    ```bash
-   python -c "from src.ev_tracker import EVTracker; print('✓ Ready!')"
+   python -c "from src.ev_tracker import EVTracker; print('Ready!')"
    ```
 
-## ⚠️ Important: Running Location
+## Important: Running Location
 
 **All Python scripts must be run from the project root directory (`UMB-EV-Tracker/`), NOT from `src/`.**
 
@@ -60,12 +60,12 @@ print(f"Global AP: {results['global_ap']:.3f}")
 
 ## Understanding `run()` vs `run_batch()`
 
-### ⚠️ CRITICAL DIFFERENCE
+### CRITICAL DIFFERENCE
 
 | Method | Threshold Behavior | Use When |
 |--------|-------------------|----------|
-| `run()` | ✅ Uses YOUR threshold | Single file, specific threshold, parameter tuning |
-| `run_batch()` | ⚠️ Overrides to 0.1 | Multiple files, comprehensive PR curves |
+| `run()` | Uses specified/default threshold | Single file, specific threshold, parameter tuning |
+| `run_batch()` | Overrides to 0.1 | Multiple files, comprehensive PR curves |
 
 ### Why the Override?
 
@@ -80,11 +80,11 @@ To compute accurate **Precision-Recall curves**, we need ALL possible detections
 ```python
 # Example 1: Test a specific threshold
 tracker.set_params(threshold=0.6)
-results = tracker.run("movie.tif", "gt.csv")  # Uses 0.6 ✅
+results = tracker.run("movie.tif", "gt.csv")  # Uses 0.6
 
 # Example 2: Comprehensive PR curves
 tracker.set_params(threshold=0.6)  # Will be ignored!
-results = tracker.run_batch([("movie.tif", "gt.csv")])  # Uses 0.1 ⚠️
+results = tracker.run_batch([("movie.tif", "gt.csv")])  # Uses 0.1
 
 # Example 3: Parameter sweep
 for thresh in [0.4, 0.5, 0.6, 0.7]:
@@ -307,16 +307,10 @@ UMB-EV-Tracker/
 └── out/                       # Results
 ```
 
-## Citation & Support
-
-**Citation:**
-```
-EV Tracker - Extracellular Vesicle Detection and Tracking
-University of Massachusetts Boston, 2024-2025
-```
+## Support
 
 **Support:**
-- GitHub Issues: [repository link]
+- GitHub Issues: [New Issue](https://github.com/shplok/UMB_EV_Tracker/issues/new)
 - Email: s.bowerman.cs@gmail.com
 
 ---
