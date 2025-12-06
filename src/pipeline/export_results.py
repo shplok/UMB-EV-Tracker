@@ -14,16 +14,15 @@ def export_detections_to_csv(
 
     print("Exporting detection results to CSV...")
     
-    # Create reverse mapping: frame -> position -> (track_id, meets_criteria)
+    # Create reverse mapping: frame -> position -> track_id
     position_to_track = {}
     for track_id, track in tracks.items():
-        meets_criteria = track.get('meets_criteria', True)  # Default to True for backwards compatibility
         for frame_idx, pos in zip(track['frames'], track['positions']):
             if frame_idx not in position_to_track:
                 position_to_track[frame_idx] = {}
             # Use position tuple as key (rounded to avoid floating point issues)
             pos_key = (round(pos[0], 2), round(pos[1], 2))
-            position_to_track[frame_idx][pos_key] = (track_id, meets_criteria)
+            position_to_track[frame_idx][pos_key] = track_id
     
     # Collect all detection data
     detection_records = []
@@ -35,22 +34,20 @@ def export_detections_to_csv(
         frame_data = all_particles[frame_idx]
         
         for pos, score in zip(frame_data['positions'], frame_data['scores']):
-            # Find matching track ID and criteria status
+            # Find matching track ID
             pos_key = (round(pos[0], 2), round(pos[1], 2))
             track_id = None
-            meets_criteria = False
             
             if frame_idx in position_to_track:
                 # Check for exact match first
                 if pos_key in position_to_track[frame_idx]:
-                    track_id, meets_criteria = position_to_track[frame_idx][pos_key]
+                    track_id = position_to_track[frame_idx][pos_key]
                 else:
                     # Check for nearby matches (within 1 pixel)
-                    for tracked_pos, (tid, criteria) in position_to_track[frame_idx].items():
+                    for tracked_pos, tid in position_to_track[frame_idx].items():
                         dist = np.sqrt((tracked_pos[0] - pos[0])**2 + (tracked_pos[1] - pos[1])**2)
                         if dist < 1.0:
                             track_id = tid
-                            meets_criteria = criteria
                             break
             
             # Only include if tracked or if include_untracked is True
@@ -62,7 +59,7 @@ def export_detections_to_csv(
                     'X_COM': round(pos[0], 0),      # Rounded to integer per your example
                     'Y_COM': round(pos[1], 0),      # Rounded to integer per your example
                     'detection_confidence': round(score, 4),
-                    'tracked': 'Yes' if (track_id is not None and meets_criteria) else 'No'
+                    'tracked': 'Yes' if track_id is not None else 'No'
                 }
                 detection_records.append(record)
     
