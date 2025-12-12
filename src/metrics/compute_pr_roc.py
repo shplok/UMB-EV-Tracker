@@ -1,17 +1,3 @@
-"""
-FIXED VERSION of compute_pr_roc.py
-
-This version properly handles False Negatives in PR/ROC curve computation.
-
-Key changes:
-1. Only the BEST match per GT frame is labeled as TP (not all matches)
-2. False Negatives are added to labels array with score=0.0
-3. Proper documentation of assumptions
-
-Author: Fixed by Claude (Nov 2025)
-Original issues: Missing FNs in labels array
-"""
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

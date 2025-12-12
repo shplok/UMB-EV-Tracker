@@ -1,9 +1,3 @@
-"""
-Improved Visualization Module for EV Detection Pipeline
-
-Creates publication-quality visualizations combining track paths with performance metrics.
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
